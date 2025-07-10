@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <g id="Groupe_44" data-name="Groupe 44" transform="translate(-439 -481)">
+    <g id="Groupe_42" data-name="Groupe 42" transform="translate(-50 271)">
+      <rect id="Rectangle_132" data-name="Rectangle 132" width="40" height="40" rx="5" transform="translate(489 210)" fill="none"/>
+    </g>
+    <g id="Groupe_43" data-name="Groupe 43" transform="translate(445.022 485.317)">
+      <path id="Tracé_12" data-name="Tracé 12" d="M27.957,288.989v15.948a3.009,3.009,0,0,1-2.921,2.623l-22.017,0A3.018,3.018,0,0,1,0,304.937V288.989ZM4.831,292.715a.918.918,0,0,0-.839.938c-.1,1.221.076,2.569.007,3.8a.962.962,0,0,0,1.065.82H22.942c.62-.045.969-.314,1.023-.905a25.861,25.861,0,0,0,0-3.762.94.94,0,0,0-1.02-.908Z" transform="translate(-0.001 -277.88)" fill="#d0fed4"/>
+      <path id="Tracé_13" data-name="Tracé 13" d="M9.984,3.681h7.987V1.661c0-2.215,3.994-2.215,3.994,0v2.02h3.17A3.028,3.028,0,0,1,27.956,6.3V9.252H0V6.3A3.028,3.028,0,0,1,2.821,3.681h3.17V1.661c0-2.215,3.994-2.215,3.994,0Z" transform="translate(0 0)" fill="#d0fed4"/>
+    </g>
+  </g>
+</svg>

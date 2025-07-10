@@ -1,0 +1,10 @@
+<svg id="icon-cross" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="12" height="12.005" viewBox="0 0 12 12.005">
+  <defs>
+    <clipPath id="clip-path">
+      <rect id="Rectangle_141" data-name="Rectangle 141" width="12" height="12.005" fill="none"/>
+    </clipPath>
+  </defs>
+  <g id="Groupe_29" data-name="Groupe 29" clip-path="url(#clip-path)">
+    <path id="Tracé_9" data-name="Tracé 9" d="M.83,0a1.006,1.006,0,0,1,.705.264L5.993,4.721,10.487.248A.9.9,0,0,1,11.775,1.5L7.283,6l4.463,4.483a.9.9,0,0,1-1.239,1.3l-4.5-4.492L1.493,11.779a.9.9,0,0,1-1.239-1.3L4.717,6.011.253,1.529A.906.906,0,0,1,.83,0" transform="translate(0 0)"/>
+  </g>
+</svg>

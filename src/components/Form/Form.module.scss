@@ -1,0 +1,15 @@
+.form
+{
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.15s ease-in-out;
+    transform: translateX(-50%) translateY(calc(-50% + 40px));
+
+    &.isVisible
+    {
+        opacity: 1;
+        visibility: visible;
+        transition: all 0.15s ease-in-out;
+        transform: translateX(-50%) translateY(-50%);
+    }
+}

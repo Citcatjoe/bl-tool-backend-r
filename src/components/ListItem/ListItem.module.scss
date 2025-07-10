@@ -1,0 +1,28 @@
+.elemListItem {
+
+    .elemListItemActions
+    {
+        button
+        {
+            img
+            {
+                opacity: .3;
+            }
+        }
+    }
+
+    &:hover
+    {
+        .elemListItemActions
+        {
+            button
+            {
+                img
+                {
+                    opacity: 1;
+                }
+            }
+        }
+    }
+
+}
