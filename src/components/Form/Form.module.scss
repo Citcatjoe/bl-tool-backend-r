@@ -5,6 +5,8 @@
     transition: all 0.15s ease-in-out;
     transform: translateX(-50%) translateY(calc(-50% + 40px));
 
+    max-height: 80vh;
+
     &.isVisible
     {
         opacity: 1;

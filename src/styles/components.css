@@ -1,0 +1,7 @@
+/* Composants personnalisés utilisant Tailwind @apply */
+
+@layer components {
+  .merguez {
+    @apply w-full h-12 rounded-md border px-4 mb-6;
+  }
+}

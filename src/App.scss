@@ -11,9 +11,7 @@
 {
     font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
     font-synthesis: none;
-    // text-rendering: optimizeLegibility;
-    // -webkit-font-smoothing: antialiased;
-    // -moz-osx-font-smoothing: grayscale;
+      
 }
 
 html 
@@ -42,8 +40,53 @@ body
 }
 
 
+
+
+// menu action
+// .menu-actions
+// {
+//   button 
+//   {
+//     img 
+//     {
+//       opacity: .3
+//     }
+//   }
+// }
+
+
+
+// CUSTOM CLASSES
+.border-blick {
+  border-color: $blick;
+}
+
+.text-blick
+{
+    color: #E2271B;
+}
+
+
+// STATES
+
+
+@layer components {
+
+  .label {
+    @apply block text-base text-black font-normal mb-2;
+  } 
+
+  .minilabel {
+    @apply block text-sm text-black mb-2;
+  }
+
+  .field {
+    @apply w-full h-12 rounded-md border px-4 mb-6;
+  }
+
+}
+
 // COMPONENTS???
-// menu new
 #menu-new
 {
   #menu-new-btn
@@ -71,31 +114,66 @@ body
   }
 }
 
-// menu action
-// .menu-actions
-// {
-//   button 
-//   {
-//     img 
+#menu-actions
+{
+  #menu-actions-btn
+  { 
+    //  img
+    //  {
+    //    opacity: .3;
+    //  }
+
+      
+  }
+
+  #menu-actions-items
+  {
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.15s ease-in-out;
+    // transform: translateY(-100%);
+    transform: translateX(10px);
+
+    &.isVisible
+    {
+      opacity: 1;
+      visibility: visible;
+      transition: all 0.15s ease-in-out;
+      transform: translateX(0px);
+    }
+  }
+}
+
+// .elem-list-item {
+
+//     &:hover
 //     {
-//       opacity: .3
+//         #menu-actions-btn
+//         {
+          
+//                 img
+//                 {
+//                     opacity: 1 !important;
+//                 }
+           
+//         }
 //     }
-//   }
+
 // }
 
+.btn-primary
+{
+    background-color: $blick;
+    font-family: Inter;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+    
 
-
-// CUSTOM CLASSES
-.border-blick {
-    border-color: $blick;
-  }
-  
-  .text-blick
-  {
-      color: #E2271B;
-  }
-
-
-// STATES
-
+    &:hover
+    {
+        background-color: darken($blick, 5%);
+    }
+}
 
