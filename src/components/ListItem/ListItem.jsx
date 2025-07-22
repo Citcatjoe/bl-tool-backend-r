@@ -3,7 +3,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase'; // Assurez-vous que le chemin d'importation de db est correct
 import { useState, useRef, useEffect } from 'react';
 
-function ListItem({ embed, iconPoll, iconCalendar, iconDotsVertical, iconEye, iconCopy, iconEdit, iconTrash, onEdit }) {
+function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconDotsVertical, iconEye, iconCopy, iconEdit, iconTrash, onEdit }) {
   // State pour gérer la visibilité du menu d'actions
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const menuRef = useRef(null);
@@ -54,7 +54,9 @@ function ListItem({ embed, iconPoll, iconCalendar, iconDotsVertical, iconEye, ic
       url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-calendar/?calendarDoc=${embed.id}`;
     } else if (embed.type === 'poll') {
       url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-quiz/?questionDoc=${embed.id}`;
-    } else {
+    } else if (embed.type === 'teaser') {
+      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-teaser/?teaserDoc=${embed.id}`;
+    }else {
       url = embed.id; // fallback
     }
     navigator.clipboard.writeText(url)
@@ -98,12 +100,19 @@ function ListItem({ embed, iconPoll, iconCalendar, iconDotsVertical, iconEye, ic
     <li className={`elem-list-item relative h-20 w-full bg-white border-b`}>
       <div className="font-blickb elem-title text-sm text-gray-600 px-4 h-full float-left flex items-center w-4/12">
         {/* Affichage du contenu de la colonne "titre" */}
-        {embed.type === 'poll' ? (embed.pollTxt || 'Titre') : (embed.type === 'calendar' ? (embed.calName || 'Titre') : 'Titre')}
+        {embed.type === 'poll' 
+          ? (embed.pollTxt || 'Titre') 
+          : embed.type === 'calendar' 
+            ? (embed.calName || 'Titre') 
+            : embed.type === 'teaser'
+              ? (embed.teaserTitle || embed.teaserLabel || 'Titre')
+              : 'Titre'}
       </div>
       <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
         {/* Affichage de l'icône en fonction du type d'embed */}
         {embed.type === 'poll' && <img src={iconPoll} alt="poll" />}
         {embed.type === 'calendar' && <img src={iconCalendar} alt="calendar" />}
+        {embed.type === 'teaser' && <img src={iconTeaser} alt="teaser" />}
       </div>
       <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-3/12">
         {/* Affichage de l'auteur */}

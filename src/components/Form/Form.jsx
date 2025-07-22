@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import s from './Form.module.scss';
 import PollForm from './PollForm';
 import CalendarForm from './CalendarForm';
+import TeaserForm from './TeaserForm';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { getAuth } from 'firebase/auth';
@@ -13,9 +14,13 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose }) {
   // Déterminer le titre selon le mode et le type
   const getFormTitle = () => {
     if (formMode === 'create') {
-      return formType === 'poll' ? 'Nouveau sondage' : 'Nouveau calendrier';
+      if (formType === 'poll') return 'Nouveau sondage';
+      if (formType === 'calendar') return 'Nouveau calendrier';
+      if (formType === 'teaser') return 'Nouveau teaser';
     } else if (formMode === 'edit') {
-      return formType === 'poll' ? 'Éditer le sondage' : 'Éditer le calendrier';
+      if (formType === 'poll') return 'Éditer le sondage';
+      if (formType === 'calendar') return 'Éditer le calendrier';
+      if (formType === 'teaser') return 'Éditer le teaser';
     }
     return 'Formulaire';
   };
@@ -114,6 +119,31 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose }) {
           saveData.author = currentUser.email;
           saveData.deleted = false;
         }
+        
+      } else if (formData.type === 'teaser') {
+        // Validation spécifique aux teasers
+        if (!formData.teaserLabel || !formData.teaserTitle) {
+          alert('Un teaser doit avoir un label et un titre');
+          return;
+        }
+
+        saveData = {
+          type: 'teaser',
+          teaserLabel: formData.teaserLabel,
+          teaserTitle: formData.teaserTitle,
+          linkGlobalTxt: formData.linkGlobalTxt || '',
+          linkGlobalHref: formData.linkGlobalHref || '',
+          linkGlobalNewTab: formData.linkGlobalNewTab || false,
+          img: formData.img || '',
+          timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
+          timeUpdated: serverTimestamp()
+        };
+        
+        // L'auteur et le champ deleted ne sont définis que lors de la création
+        if (formMode === 'create') {
+          saveData.author = currentUser.email;
+          saveData.deleted = false;
+        }
       }
 
       // Sauvegarde selon le mode
@@ -121,7 +151,13 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose }) {
         // Création d'un nouvel élément
         const docRef = await addDoc(collection(db, 'embeds'), saveData);
         console.log('Nouvel élément créé avec ID:', docRef.id);
-        alert(`${formData.type === 'poll' ? 'Sondage' : 'Calendrier'} créé avec succès !`);
+        
+        let successMessage = 'Élément créé avec succès !';
+        if (formData.type === 'poll') successMessage = 'Sondage créé avec succès !';
+        else if (formData.type === 'calendar') successMessage = 'Calendrier créé avec succès !';
+        else if (formData.type === 'teaser') successMessage = 'Teaser créé avec succès !';
+        
+        alert(successMessage);
         
       } else if (formMode === 'edit') {
         // Mise à jour d'un élément existant
@@ -132,7 +168,13 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose }) {
         const docRef = doc(db, 'embeds', currentEmbed.id);
         await updateDoc(docRef, saveData);
         console.log('Élément mis à jour:', currentEmbed.id);
-        alert(`${formData.type === 'poll' ? 'Sondage' : 'Calendrier'} modifié avec succès !`);
+        
+        let successMessage = 'Élément modifié avec succès !';
+        if (formData.type === 'poll') successMessage = 'Sondage modifié avec succès !';
+        else if (formData.type === 'calendar') successMessage = 'Calendrier modifié avec succès !';
+        else if (formData.type === 'teaser') successMessage = 'Teaser modifié avec succès !';
+        
+        alert(successMessage);
       }
       
       handleClose();
@@ -162,11 +204,11 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose }) {
         </div>
 
         {/* Debug info (à supprimer plus tard) */}
-        {/* <div className="mb-4 p-2 bg-gray-100 text-xs">
+        <div className="mb-4 p-2 bg-gray-100 text-xs">
           <p>Mode: {formMode}</p>
           <p>Type: {formType}</p>
           <p>ID: {currentEmbed?.id || 'Nouveau'}</p>
-        </div> */}
+        </div>
 
         {/* Contenu du formulaire selon le type */}
         {formType === 'poll' && (
@@ -179,6 +221,14 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose }) {
 
         {formType === 'calendar' && (
           <CalendarForm
+            currentEmbed={currentEmbed}
+            formMode={formMode}
+            onChange={handleFormDataChange}
+          />
+        )}
+
+        {formType === 'teaser' && (
+          <TeaserForm
             currentEmbed={currentEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}

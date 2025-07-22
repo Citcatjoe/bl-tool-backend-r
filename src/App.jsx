@@ -17,6 +17,7 @@ import iconEdit from './assets/img/icon-edit.svg';
 import iconTrash from './assets/img/icon-trash-red.svg';
 import iconEye from './assets/img/icon-eye.svg';
 import iconDotsVertical from './assets/img/icon-dots-vertical.svg';
+import iconTeaser from './assets/img/icon-teaser.svg';
 import PollListItem from './components/PollListItem/PollListItem';
 import CalendarListItem from './components/CalendarListItem/CalendarListItem';
 import ListItem from './components/ListItem/ListItem';
@@ -39,6 +40,10 @@ function App() {
     const [formType, setFormType] = useState(null); // 'poll' | 'calendar' | null
     const [currentEmbed, setCurrentEmbed] = useState(null); // Élément en cours d'édition
 
+    // States pour mode développeur
+    const [devMode, setDevMode] = useState(true); // Mode développeur
+    const [readCount, setReadCount] = useState(0); // Compteur de lectures Firebase
+
     useEffect(() => {
         const auth = getAuth();
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -52,9 +57,13 @@ function App() {
         const unsubscribe = listenToEmbeds((data) => {
             setEmbeds(data);
             console.log('Données Firestore embeds (live):', data);
+            // Compter les lectures en mode dev
+            if (devMode) {
+                setReadCount(prevCount => prevCount + data.length);
+            }
         });
         return () => unsubscribe();
-    }, []);
+    }, [devMode]);
 
     const handleLogin = (firebaseUser) => {
         setUser(firebaseUser);
@@ -78,6 +87,14 @@ function App() {
     const handleNewCalendar = () => {
         setFormMode('create');
         setFormType('calendar');
+        setCurrentEmbed(null);
+        setFormVisible(true);
+        setMenuNewOpen(false);
+    };
+
+    const handleNewTeaser = () => {
+        setFormMode('create');
+        setFormType('teaser');
         setCurrentEmbed(null);
         setFormVisible(true);
         setMenuNewOpen(false);
@@ -112,9 +129,14 @@ function App() {
             if (!searchTerm.trim()) return true; // Afficher tout si pas de recherche
             
             // Recherche dans le titre selon le type
-            const title = embed.type === 'poll' 
-                ? embed.pollTxt 
-                : embed.calName;
+            let title = '';
+            if (embed.type === 'poll') {
+                title = embed.pollTxt;
+            } else if (embed.type === 'calendar') {
+                title = embed.calName;
+            } else if (embed.type === 'teaser') {
+                title = embed.teaserTitle || embed.teaserLabel;
+            }
             
             return title?.toLowerCase().includes(searchTerm.toLowerCase());
         })
@@ -130,7 +152,7 @@ function App() {
 
     return (
         <div className={`App relative bg-gray px-6 pt-40 overflow-auto`}>
-
+                {devMode && <h1>Lectures Firebase: {readCount}</h1>}
                 <BlackOverlay formVisible={formVisible} onClick={handleCloseForm} />
                 <Header 
                     onLogout={handleLogout} 
@@ -184,6 +206,7 @@ function App() {
                                 embed={embed}
                                 iconPoll={iconPoll}
                                 iconCalendar={iconCalendar}
+                                iconTeaser={iconTeaser}
                                 iconDotsVertical={iconDotsVertical}
                                 iconEye={iconEye}
                                 iconCopy={iconCopy}
@@ -206,6 +229,7 @@ function App() {
                     <ul id="menu-new-items" className={`absolute bg-white py-2 -top-4 w-60 right-0 rounded-xl shadow-lg${menuNewOpen ? ' isVisible' : ''}`}>
                         <li id="btn-new-poll" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewPoll}>Nouveau sondage</li>
                         <li id="btn-new-calendar" className="hover:bg-gray-200 cursor-pointer  h-12 flex items-center px-4" onClick={handleNewCalendar}>Nouveau calendrier</li>
+                        <li id="btn-new-teaser" className="hover:bg-gray-200 cursor-pointer  h-12 flex items-center px-4" onClick={handleNewTeaser}>Nouveau Teaser</li>
                     </ul>
                 </div>
             {/* Dashboard ou widgets ici */}
