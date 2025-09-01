@@ -3,7 +3,45 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase'; // Assurez-vous que le chemin d'importation de db est correct
 import { useState, useRef, useEffect } from 'react';
 
-function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconDotsVertical, iconEye, iconCopy, iconEdit, iconTrash, onEdit }) {
+function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconTinder, iconDotsVertical, iconEye, iconCopy, iconEdit, iconTrash, onEdit, onDataChange, user }) {
+  // Handler pour la modification de la structure d'un poll
+  // const handleModifyPollData = async () => {
+  //   if (embed.type !== 'poll') return;
+  //   if (!Array.isArray(embed.answers)) {
+  //     alert('Aucune donnée answers à migrer.');
+  //     return;
+  //   }
+  //   // Extraire les textes et compteurs
+  //   const answerTxts = embed.answers.map(a => a.answerTxt || '');
+  //   const answerCounters = embed.answers.map(a => typeof a.answerCounter === 'number' ? a.answerCounter : 0);
+  //   try {
+  //     const docRef = doc(db, 'embeds', embed.id);
+  //     await updateDoc(docRef, {
+  //       answerTxts,
+  //       answerCounters
+  //     });
+  //     console.log('Migration réussie pour', embed.id, answerTxts, answerCounters);
+  //     alert('Migration réussie !');
+  //     if (onDataChange) onDataChange();
+  //   } catch (error) {
+  //     console.error('Erreur lors de la migration des réponses:', error);
+  //     alert('Erreur lors de la migration. Veuillez réessayer.');
+  //   }
+  // };
+    // Suppression définitive du document Firestore
+    const handleDeleteForReal = async () => {
+      if (!window.confirm('Supprimer pour de vrai ? Cette action est IRRÉVERSIBLE !')) return;
+      try {
+        const docRef = doc(db, 'embeds', embed.id);
+        await docRef.delete ? docRef.delete() : await import('firebase/firestore').then(({ deleteDoc }) => deleteDoc(docRef));
+        console.log('Document supprimé pour de vrai:', embed.id);
+        alert('Document supprimé définitivement !');
+        if (onDataChange) onDataChange();
+      } catch (error) {
+        console.error('Erreur lors de la suppression définitive:', error);
+        alert('Erreur lors de la suppression définitive. Veuillez réessayer.');
+      }
+    };
   // State pour gérer la visibilité du menu d'actions
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const menuRef = useRef(null);
@@ -56,7 +94,11 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconDotsVertical,
       url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-quiz/?questionDoc=${embed.id}`;
     } else if (embed.type === 'teaser') {
       url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-teaser/?teaserDoc=${embed.id}`;
-    }else {
+    } else if (embed.type === 'folder') {
+      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-folder/?folderDoc=${embed.id}`;
+     } else if (embed.type === 'tinder') {
+      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-tinder/?tinderDoc=${embed.id}`; // Les dossiers n'ont pas d'URL d'embed
+    } else {
       url = embed.id; // fallback
     }
     navigator.clipboard.writeText(url)
@@ -87,6 +129,11 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconDotsVertical,
             const docRef = doc(db, 'embeds', embed.id);
             await updateDoc(docRef, { deleted: true });
             console.log('Champ "deleted" mis à TRUE pour', embed.id);
+            
+            // Déclencher un rafraîchissement des données si en mode non temps réel
+            if (onDataChange) {
+              onDataChange();
+            }
         } catch (error) {
             console.error('Erreur lors de la mise à jour du champ "deleted":', error);
             alert('Erreur lors de la suppression. Veuillez réessayer.');
@@ -100,31 +147,44 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconDotsVertical,
     <li className={`elem-list-item relative h-20 w-full bg-white border-b`}>
       <div className="font-blickb elem-title text-sm text-gray-600 px-4 h-full float-left flex items-center w-4/12">
         {/* Affichage du contenu de la colonne "titre" */}
-        {embed.type === 'poll' 
-          ? (embed.pollTxt || 'Titre') 
-          : embed.type === 'calendar' 
-            ? (embed.calName || 'Titre') 
+        {embed.type === 'poll'
+          ? (embed.pollTxt || 'Titre')
+          : embed.type === 'calendar'
+            ? (embed.calName || 'Titre')
             : embed.type === 'teaser'
               ? (embed.teaserTitle || embed.teaserLabel || 'Titre')
-              : 'Titre'}
+              : embed.type === 'folder'
+                ? (embed.folderName || 'Dossier')
+                : embed.type === 'tinder'
+                  ? (embed.tinderTitle || 'Tinder')
+                  : 'Titre'}
       </div>
       <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
         {/* Affichage de l'icône en fonction du type d'embed */}
         {embed.type === 'poll' && <img src={iconPoll} alt="poll" />}
         {embed.type === 'calendar' && <img src={iconCalendar} alt="calendar" />}
         {embed.type === 'teaser' && <img src={iconTeaser} alt="teaser" />}
+        {embed.type === 'folder' && <img src={iconFolder} alt="folder" />}
+        {embed.type === 'tinder' && <img src={iconTinder} alt="tinder" />}
       </div>
       <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-3/12">
         {/* Affichage de l'auteur */}
         {embed.author || 'Auteur inconnu'}
       </div>
+      {/* <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
+          {typeof embed.counterViews === 'number' ? embed.counterViews : 0}
+      </div> */}
       <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
         {/* Affichage de la performance ou du nombre de réponses */}
         {embed.type === 'poll'
-          ? (Array.isArray(embed.answers)
-              ? embed.answers.reduce((acc, a) => acc + (a.answerCounter || 0), 0)
+          ? (Array.isArray(embed.answerCounters)
+              ? embed.answerCounters.reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
               : 0)
-          : <span className="text-gray-400">n/a</span>}
+          : embed.type === 'tinder'
+            ? (embed.tinderVotes && typeof embed.tinderVotes === 'object'
+                ? Object.values(embed.tinderVotes).reduce((acc, vote) => acc + (vote.yes || 0) + (vote.no || 0), 0)
+                : 0)
+            : <span className="text-gray-400">n/a</span>}
       </div>
       {/* <div className={`${s.elemListItemActions} relative h-full text-sm text-gray-600 px-4 absolute top-1/2 -translate-y-1/2 flex items-center`}>
        <button id="btn-social-view" className="hover:bg-gray-200 relative btn-white aspect-square h-8 rounded-md px-4 ml-auto mr-1" title="Vue RS" onClick={handleSocialView}>
@@ -195,6 +255,28 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconDotsVertical,
                   <img src={iconTrash} alt="" className="mr-5 w-5 h-5" />
                   Supprimer
                 </li>
+                {user?.email === 'cesargreppin@gmail.com' && (
+                  <li 
+                    className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4"
+                    onClick={() => {
+                      handleDeleteForReal();
+                      setIsMenuVisible(false);
+                    }}
+                  >
+                    <img src={iconTrash} alt="" className="mr-5 w-5 h-5" />
+                    Supprimer pour de vrai
+                  </li>
+                )}
+                {/* <li 
+                  id="menu-action-modify-this-poll-data" 
+                  className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4"
+                  onClick={() => {
+                    handleModifyPollData();
+                    setIsMenuVisible(false);
+                  }}
+                >
+                  GO!!
+                </li> */}
             </ul>
         </div>
     </li>

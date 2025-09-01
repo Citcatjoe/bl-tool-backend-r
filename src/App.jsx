@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'; 
+import { useState, useEffect, useRef } from 'react'; 
 import './App.scss';
 import LoadingOverlay from './components/LoadingOverlay/LoadingOverlay';
 import BlackOverlay from './components/BlackOverlay/BlackOverlay';
@@ -18,6 +18,9 @@ import iconTrash from './assets/img/icon-trash-red.svg';
 import iconEye from './assets/img/icon-eye.svg';
 import iconDotsVertical from './assets/img/icon-dots-vertical.svg';
 import iconTeaser from './assets/img/icon-teaser.svg';
+import iconFolder from './assets/img/icon-folder.svg';
+import iconTinder from './assets/img/icon-tinder.svg';
+import iconArrowTurn from './assets/img/icon-arrow-turn.svg';
 import PollListItem from './components/PollListItem/PollListItem';
 import CalendarListItem from './components/CalendarListItem/CalendarListItem';
 import ListItem from './components/ListItem/ListItem';
@@ -31,6 +34,21 @@ function App() {
     const [loading, setLoading] = useState(true); // Par défaut, l'overlay est visible
     const [user, setUser] = useState(null);
     const [menuNewOpen, setMenuNewOpen] = useState(false);
+    const menuNewRef = useRef(null);
+    // Fermer le menu #menu-new si on clique à l'extérieur
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuNewRef.current && !menuNewRef.current.contains(event.target)) {
+                setMenuNewOpen(false);
+            }
+        };
+        if (menuNewOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [menuNewOpen]);
     const [embeds, setEmbeds] = useState([]);
     const [searchTerm, setSearchTerm] = useState(''); // State pour la recherche
     const [typeFilter, setTypeFilter] = useState('all'); // State pour le filtre de type ('all', 'poll', 'calendar')
@@ -41,8 +59,10 @@ function App() {
     const [currentEmbed, setCurrentEmbed] = useState(null); // Élément en cours d'édition
 
     // States pour mode développeur
-    const [devMode, setDevMode] = useState(true); // Mode développeur
+    const [devMode, setDevMode] = useState(false); // Mode développeur
     const [readCount, setReadCount] = useState(0); // Compteur de lectures Firebase
+    const [isRealTime, setIsRealTime] = useState(false); // Mode temps réel ou chargement unique
+    const [isRefreshing, setIsRefreshing] = useState(false); // État de rafraîchissement manuel
 
     useEffect(() => {
         const auth = getAuth();
@@ -54,16 +74,59 @@ function App() {
     }, []);
 
     useEffect(() => {
-        const unsubscribe = listenToEmbeds((data) => {
+        if (isRealTime) {
+            // MODE TEMPS RÉEL
+            const unsubscribe = listenToEmbeds((data) => {
+                setEmbeds(data);
+                console.log('Données Firestore embeds (live):', data);
+                // Compter les lectures en mode dev
+                if (devMode) {
+                    setReadCount(prevCount => prevCount + data.length);
+                }
+            });
+            return () => unsubscribe();
+        } else {
+            // MODE CHARGEMENT UNIQUE
+            loadEmbedsOnce();
+        }
+    }, [devMode, isRealTime]);
+
+    // Fonction de chargement unique
+    const loadEmbedsOnce = async () => {
+        try {
+            const data = await fetchData(devMode);
+            console.log('Données Firestore embeds (once):', data);
             setEmbeds(data);
-            console.log('Données Firestore embeds (live):', data);
-            // Compter les lectures en mode dev
-            if (devMode) {
-                setReadCount(prevCount => prevCount + data.length);
+            setReadCount(prevCount => prevCount + data.length);
+        } catch (error) {
+            // Removed error log
+        }
+    };
+
+    // Fonction de rafraîchissement manuel
+    const handleRefresh = async () => {
+        if (isRealTime) return; // Pas besoin de rafraîchir en mode temps réel
+        setIsRefreshing(true);
+        try {
+            await loadEmbedsOnce();
+        } catch (error) {
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    // Callback pour rafraîchir automatiquement après une opération CRUD en mode non temps réel
+    const handleDataChange = async () => {
+        console.log("enter handleDataChange")
+        if (!isRealTime) {
+            try {
+                console.log("try await loadEmbedsOnce")
+                await loadEmbedsOnce();
+            } catch (error) {
+                console.error('Erreur lors du rafraîchissement auto après CRUD:', error);
             }
-        });
-        return () => unsubscribe();
-    }, [devMode]);
+        }
+    };
 
     const handleLogin = (firebaseUser) => {
         setUser(firebaseUser);
@@ -100,6 +163,22 @@ function App() {
         setMenuNewOpen(false);
     };
 
+    const handleNewFolder = () => {
+        setFormMode('create');
+        setFormType('folder');
+        setCurrentEmbed(null);
+        setFormVisible(true);
+        setMenuNewOpen(false);
+    };
+
+    const handleNewTinder = () => {
+        setFormMode('create');
+        setFormType('tinder');
+        setCurrentEmbed(null);
+        setFormVisible(true);
+        setMenuNewOpen(false);
+    };
+
     const handleEditEmbed = (embed) => {
         setFormMode('edit');
         setFormType(embed.type); // poll ou calendar
@@ -118,27 +197,30 @@ function App() {
 
     // Fonction de filtrage des embeds selon le terme de recherche et le type
     const filteredEmbeds = embeds
-        .filter(embed => !embed.deleted)
         .filter(embed => {
-            // Filtre par type
-            if (typeFilter !== 'all' && embed.type !== typeFilter) {
-                return false;
+            if (typeFilter === 'deleted') {
+                return embed.deleted === true;
+            } else {
+                if (embed.deleted) return false;
+                if (typeFilter !== 'all' && embed.type !== typeFilter) {
+                    return false;
+                }
+                // Filtre par recherche textuelle
+                if (!searchTerm.trim()) return true;
+                let title = '';
+                if (embed.type === 'poll') {
+                    title = embed.pollTxt;
+                } else if (embed.type === 'calendar') {
+                    title = embed.calName;
+                } else if (embed.type === 'teaser') {
+                    title = embed.teaserTitle || embed.teaserLabel;
+                } else if (embed.type === 'folder') {
+                    title = embed.folderName;
+                } else if (embed.type === 'tinder') {
+                    title = embed.tinderTitle;
+                }
+                return title?.toLowerCase().includes(searchTerm.toLowerCase());
             }
-            
-            // Filtre par recherche textuelle
-            if (!searchTerm.trim()) return true; // Afficher tout si pas de recherche
-            
-            // Recherche dans le titre selon le type
-            let title = '';
-            if (embed.type === 'poll') {
-                title = embed.pollTxt;
-            } else if (embed.type === 'calendar') {
-                title = embed.calName;
-            } else if (embed.type === 'teaser') {
-                title = embed.teaserTitle || embed.teaserLabel;
-            }
-            
-            return title?.toLowerCase().includes(searchTerm.toLowerCase());
         })
         .sort((a, b) => b.timeCreated - a.timeCreated);
 
@@ -152,7 +234,7 @@ function App() {
 
     return (
         <div className={`App relative bg-gray px-6 pt-40 overflow-auto`}>
-                {devMode && <h1>Lectures Firebase: {readCount}</h1>}
+                
                 <BlackOverlay formVisible={formVisible} onClick={handleCloseForm} />
                 <Header 
                     onLogout={handleLogout} 
@@ -167,6 +249,8 @@ function App() {
                     formType={formType}
                     currentEmbed={currentEmbed}
                     onClose={handleCloseForm}
+                    onDataChange={handleDataChange}
+                    devMode={devMode}
                 />
                 
                 {/* <button
@@ -175,7 +259,7 @@ function App() {
                 >
                     form mode
                 </button> */}
-                <div className="container max-w-5xl mx-auto mb-8">
+                <div className="container max-w-5xl mx-auto mb-8 flex">
                     <div id="searchbar" className="flex w-96 relative">
                         <img src={iconManifier} alt="" className="absolute top-1/2 -translate-y-1/2 left-4" />
                         <input 
@@ -186,6 +270,36 @@ function App() {
                             placeholder="Rechercher..." 
                         />
                     </div>
+
+                    {/* <ul id="refresh-options" className="ml-auto"> */}
+                        {/* <li className="inline float-left">Mode Live</li>
+                        <li className="inline"><button id="btn-refresh">Rafraichir</button></li> */}
+
+                        <div className="ml-auto flex gap-2 mt-2">
+                            {/* {devMode && (
+                                <div className="mb-4">
+                                    <h1>Lectures Firebase: {readCount}</h1>
+                                    
+                                </div>
+                            )} */}
+                            {/* <button 
+                                onClick={() => setIsRealTime(!isRealTime)}
+                                className={`px-4 py-2 rounded text-white ${isRealTime ? 'bg-green-500' : 'bg-blue-500'}`}
+                            >
+                                {isRealTime ? 'Mode Live ON' : 'Mode Live OFF'}
+                            </button> */}
+                            {!isRealTime && (
+                                <button 
+                                    onClick={handleRefresh}
+                                    disabled={isRefreshing}
+                                    className="btn-secondary px-4 hover:bg-gray-200 disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    <img src={iconArrowTurn} alt="" className="mr-1 w-4" />
+                                    {isRefreshing ? 'Rafraîchissement...' : 'Rafraîchir'}
+                                </button>
+                            )}
+                        </div>
+                    {/* </ul> */}
                 </div>
 
                 <div className="container max-w-5xl mx-auto mb-8">
@@ -194,7 +308,8 @@ function App() {
                             <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-4/12">Titre</div>
                             <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Type</div>
                             <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-3/12">Auteur</div>
-                            <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Perf.</div>
+                            {/* <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Vues</div> */}
+                            <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Inter.</div>
                             <div className="text-xs text-gray-600 px-4 h-full float-right flex items-center"></div>
                         </li>
                     </ul>
@@ -207,12 +322,16 @@ function App() {
                                 iconPoll={iconPoll}
                                 iconCalendar={iconCalendar}
                                 iconTeaser={iconTeaser}
+                                iconFolder={iconFolder}
+                                iconTinder={iconTinder}
                                 iconDotsVertical={iconDotsVertical}
                                 iconEye={iconEye}
                                 iconCopy={iconCopy}
                                 iconEdit={iconEdit}
                                 iconTrash={iconTrash}
                                 onEdit={handleEditEmbed}
+                                onDataChange={handleDataChange}
+                                user={user}
                             />
                         ))}
                     </ul>
@@ -222,14 +341,16 @@ function App() {
                     <img src={iconPlusWhite} alt="Icon-add" className="absolute w-5 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </span> */}
 
-                <div id="menu-new" className="fixed bottom-6 right-6 z-10">
+                <div id="menu-new" className="fixed bottom-6 right-6 z-10" ref={menuNewRef}>
                     <button id="menu-new-btn" className="menu-new-btn h-16 w-16 rounded-full bg-blick shadow-lg relative" onClick={() => setMenuNewOpen(v => !v)}>
                         <img src={iconPlusWhite} alt="Icon-add" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                     </button>
                     <ul id="menu-new-items" className={`absolute bg-white py-2 -top-4 w-60 right-0 rounded-xl shadow-lg${menuNewOpen ? ' isVisible' : ''}`}>
                         <li id="btn-new-poll" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewPoll}>Nouveau sondage</li>
                         <li id="btn-new-calendar" className="hover:bg-gray-200 cursor-pointer  h-12 flex items-center px-4" onClick={handleNewCalendar}>Nouveau calendrier</li>
-                        <li id="btn-new-teaser" className="hover:bg-gray-200 cursor-pointer  h-12 flex items-center px-4" onClick={handleNewTeaser}>Nouveau Teaser</li>
+                        <li id="btn-new-teaser" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewTeaser}>Nouveau teaser</li>
+                        <li id="btn-new-folder" className="h-12 flex items-center px-4 text-gray-400 cursor-not-allowed opacity-50" title="Fonctionnalité en cours de développement">Nouveau dossier</li>
+                        <li id="btn-new-tinder" className="hover:bg-gray-200 cursor-pointer  h-12 flex items-center px-4" onClick={handleNewTinder}>Nouveau tinder</li>
                     </ul>
                 </div>
             {/* Dashboard ou widgets ici */}

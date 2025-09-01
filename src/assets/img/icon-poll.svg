@@ -1,8 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-  <g id="Groupe_19" data-name="Groupe 19" transform="translate(-489 -210)">
-    <rect id="Rectangle_132" data-name="Rectangle 132" width="40" height="40" rx="5" transform="translate(489 210)" fill="#fff"/>
-    <rect id="Rectangle_135" data-name="Rectangle 135" width="17" height="7" rx="3.5" transform="translate(495 217)" fill="#d0f8ff"/>
-    <rect id="Rectangle_136" data-name="Rectangle 136" width="28" height="7" rx="3.5" transform="translate(495 226.5)" fill="#d0f8ff"/>
-    <rect id="Rectangle_137" data-name="Rectangle 137" width="11" height="7" rx="3.5" transform="translate(495 236)" fill="#d0f8ff"/>
+  <g id="icon-poll" transform="translate(-269 -504)">
+    <rect id="Rectangle_251" data-name="Rectangle 251" width="40" height="40" rx="5" transform="translate(269 504)" fill="none"/>
+    <g id="Groupe_4360" data-name="Groupe 4360" transform="translate(275.289 511.055)">
+      <rect id="Rectangle_244" data-name="Rectangle 244" width="27.421" height="6.473" transform="translate(0 9.708)" fill="#d0f8fe"/>
+      <rect id="Rectangle_245" data-name="Rectangle 245" width="23.501" height="6.473" transform="translate(0 -0.001)" fill="#d0f8fe"/>
+      <rect id="Rectangle_246" data-name="Rectangle 246" width="15.66" height="6.473" transform="translate(0 19.418)" fill="#d0f8fe"/>
+    </g>
   </g>
 </svg>

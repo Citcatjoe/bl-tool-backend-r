@@ -1,10 +1,26 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import s from './Header.module.scss';
 import logo from '../../assets/img/blick-tools-logo.svg';
 import iconUser from '../../assets/img/icon-user.svg';
 
 function Header({ onLogout, typeFilter, onTypeFilterChange, user }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuUserRef = useRef(null);
+
+  // Fermer le menu #menu-user si on clique à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuUserRef.current && !menuUserRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
 
   // Handler pour les changements de filtre
   const handleFilterClick = (filterType) => {
@@ -45,13 +61,36 @@ function Header({ onLogout, typeFilter, onTypeFilterChange, user }) {
         </li>
         <li 
           id="filter-teaser" 
-          className="cursor-pointer hover:font-blickb opacity-20"
-          title="Fonctionnalité non disponible"
+          className={getFilterClasses('teaser')}
+          onClick={() => handleFilterClick('teaser')}
         >
           Teasers
         </li>
+        <li 
+          id="filter-folder" 
+          className={getFilterClasses('folder')}
+          onClick={() => handleFilterClick('folder')}
+        >
+          Dossiers
+        </li>
+        <li 
+          id="filter-tinder" 
+          className={getFilterClasses('tinder')}
+          onClick={() => handleFilterClick('tinder')}
+        >
+          Tinders
+        </li>
+        {user?.email === 'cesargreppin@gmail.com' && (
+          <li 
+            id="filter-deleted"
+            className={typeFilter === 'deleted' ? "font-blickb underline decoration-2 cursor-pointer" : "cursor-pointer hover:font-blickb"}
+            onClick={() => handleFilterClick('deleted')}
+          >
+            Corbeille
+          </li>
+        )}
       </ul>
-      <div id="menu-user" className="absolute top-0 right-0 h-full aspect-square">
+  <div id="menu-user" className="absolute top-0 right-0 h-full aspect-square" ref={menuUserRef}>
         <button
           id="menu-user-btn"
           className="btn-white hover:bg-gray-200 btn-secondary h-full aspect-square border-l"

@@ -1,0 +1,10 @@
+<svg id="icon-arrow-turn" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="13" height="12.553" viewBox="0 0 13 12.553">
+  <defs>
+    <clipPath id="clip-path">
+      <rect id="Rectangle_218" data-name="Rectangle 218" width="13" height="12.553" fill="none"/>
+    </clipPath>
+  </defs>
+  <g id="Groupe_4321" data-name="Groupe 4321" clip-path="url(#clip-path)">
+    <path id="Tracé_52" data-name="Tracé 52" d="M6.191,0A6.575,6.575,0,0,1,8.736.5a6.531,6.531,0,0,1,1.94,1.32L11.913.6A.675.675,0,0,1,13,1.089l0,3.646a.691.691,0,0,1-.724.649c-1.122.078-2.333-.061-3.465,0a.678.678,0,0,1-.573-1.108c.319-.4.812-.754,1.149-1.147l.029-.049A4.476,4.476,0,0,0,2.865,9.175a4.454,4.454,0,0,0,5.94.8c.268-.185.539-.488.794-.64a.888.888,0,0,1,1.044,1.433A6.267,6.267,0,1,1,6.191,0" transform="translate(0 0)"/>
+  </g>
+</svg>

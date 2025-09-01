@@ -3,19 +3,15 @@ import React, { useState, useEffect } from 'react';
 function PollForm({ currentEmbed, formMode, onChange }) {
   // States pour les champs du sondage
   const [pollTxt, setPollTxt] = useState('');
-  const [answers, setAnswers] = useState([
-    { answerTxt: '', answerCounter: 0 },
-    { answerTxt: '', answerCounter: 0 }
-  ]);
+  const [answerTxts, setAnswerTxts] = useState(['', '']);
+  const [answerCounters, setAnswerCounters] = useState([0, 0]);
 
   // Initialisation des données en mode édition
   useEffect(() => {
     if (formMode === 'edit' && currentEmbed) {
       setPollTxt(currentEmbed.pollTxt || '');
-      setAnswers(currentEmbed.answers || [
-        { answerTxt: '', answerCounter: 0 },
-        { answerTxt: '', answerCounter: 0 }
-      ]);
+      setAnswerTxts(Array.isArray(currentEmbed.answerTxts) ? currentEmbed.answerTxts : ['', '']);
+      setAnswerCounters(Array.isArray(currentEmbed.answerCounters) ? currentEmbed.answerCounters : [0, 0]);
     }
   }, [formMode, currentEmbed]);
 
@@ -23,33 +19,37 @@ function PollForm({ currentEmbed, formMode, onChange }) {
   useEffect(() => {
     onChange({
       pollTxt,
-      answers,
+      answerTxts,
+      answerCounters,
       type: 'poll'
     });
-  }, [pollTxt, answers]); // Suppression de onChange des dépendances
+  }, [pollTxt, answerTxts, answerCounters]);
 
   const handleAnswerChange = (index, value) => {
-    const newAnswers = [...answers];
-    newAnswers[index].answerTxt = value;
-    setAnswers(newAnswers);
+  const newTxts = [...answerTxts];
+  newTxts[index] = value;
+  setAnswerTxts(newTxts);
   };
 
   const addAnswer = () => {
-    setAnswers([...answers, { answerTxt: '', answerCounter: 0 }]);
+  setAnswerTxts([...answerTxts, '']);
+  setAnswerCounters([...answerCounters, 0]);
   };
 
   const removeAnswer = (index) => {
-    if (answers.length > 2) { // Minimum 2 réponses
-      const newAnswers = answers.filter((_, i) => i !== index);
-      setAnswers(newAnswers);
+    if (answerTxts.length > 2) { // Minimum 2 réponses
+      const newTxts = answerTxts.filter((_, i) => i !== index);
+      const newCounters = answerCounters.filter((_, i) => i !== index);
+      setAnswerTxts(newTxts);
+      setAnswerCounters(newCounters);
     }
   };
 
   return (
-    <div className="poll-form">
+    <div className="space-y-4">
       {/* Question du sondage */}
-      <div className="mb-4">
-        <label className="minilabel">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Question du sondage *
         </label>
         <input
@@ -57,45 +57,51 @@ function PollForm({ currentEmbed, formMode, onChange }) {
           value={pollTxt}
           onChange={(e) => setPollTxt(e.target.value)}
           placeholder="Quelle est votre question ?"
-          className="field mb-2"
+          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />
       </div>
 
       {/* Réponses possibles */}
-      <div className="mb-4 bg-gray-100 p-3 rounded-md">
-        <label className="minilabel">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
           Réponses possibles *
         </label>
-        {answers.map((answer, index) => (
-          <div key={index} className="flex items-center mb-2">
-            <input
-              type="text"
-              value={answer.answerTxt}
-              onChange={(e) => handleAnswerChange(index, e.target.value)}
-              placeholder={`Réponse ${index + 1}`}
-              className="field mb-2"
-              required
-            />
-            {answers.length > 2 && (
-              <button
-                type="button"
-                onClick={() => removeAnswer(index)}
-                className="px-2 py-1 text-red-500 hover:bg-red-50 rounded"
-                title="Supprimer cette réponse"
-              >
-                ×
-              </button>
-            )}
+        <div className="bg-gray-50 border border-gray-300 p-4 rounded-md">
+          <div className="space-y-3">
+            {answerTxts.map((txt, index) => (
+              <div key={index} className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={txt}
+                  onChange={(e) => handleAnswerChange(index, e.target.value)}
+                  placeholder={`Réponse ${index + 1}`}
+                  className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                {/* Affichage du compteur (lecture seule) */}
+                {/* <span className="text-xs text-gray-400 ml-2">Votes: {answerCounters[index]}</span> */}
+                {answerTxts.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => removeAnswer(index)}
+                    className="px-2 py-1 text-xs text-red-500 hover:text-red-700"
+                    title="Supprimer cette réponse"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-        <button
-          type="button"
-          onClick={addAnswer}
-          className="text-sm text-blick hover:text-blue-700"
-        >
-          + Ajouter une réponse
-        </button>
+          <button
+            type="button"
+            onClick={addAnswer}
+            className="text-blick text-sm mt-3"
+          >
+            + Ajouter une réponse
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -90,10 +90,10 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
   };
 
   return (
-    <div className="calendar-form">
+    <div className="space-y-4">
       {/* Titre du calendrier */}
-      <div className="mb-4">
-        <label className="minilabel">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Titre du calendrier *
         </label>
         <input
@@ -101,111 +101,119 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
           value={calName}
           onChange={(e) => setCalName(e.target.value)}
           placeholder="Titre de votre calendrier"
-          className="field mb-2"
+          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />
       </div>
 
       {/* Dates (couples texte + date) */}
-      <div className="mb-4">
-        <label className="minilabel">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
           Dates *
         </label>
-        {dates.map((dateItem, index) => (
-          <div key={index} className="border border-gray-200 rounded-md p-3 mb-3 bg-gray-100">
-            <div className="flex justify-between items-center mb-2">
-              <span className="minilabel">Date {index + 1}</span>
-              <div className="flex gap-1">
-                {/* Boutons de réorganisation */}
-                <button
-                  type="button"
-                  onClick={() => moveDateUp(index)}
-                  disabled={index === 0}
-                  className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30"
-                  title="Déplacer vers le haut"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveDateDown(index)}
-                  disabled={index === dates.length - 1}
-                  className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30"
-                  title="Déplacer vers le bas"
-                >
-                  ↓
-                </button>
-                {/* Bouton de suppression */}
-                {dates.length > 1 && (
+        <div className="space-y-4">
+          {dates.map((dateItem, index) => (
+            <div key={index} className="border border-gray-300 rounded-md p-4 bg-gray-50">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-medium text-gray-700">Date {index + 1}</span>
+                <div className="flex gap-2">
+                  {/* Boutons de réorganisation */}
                   <button
                     type="button"
-                    onClick={() => removeDate(index)}
-                    className="px-2 py-1 text-xs text-red-500 hover:text-red-700"
-                    title="Supprimer cette date"
+                    onClick={() => moveDateUp(index)}
+                    disabled={index === 0}
+                    className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                    title="Déplacer vers le haut"
                   >
-                    ×
+                    ↑
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => moveDateDown(index)}
+                    disabled={index === dates.length - 1}
+                    className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                    title="Déplacer vers le bas"
+                  >
+                    ↓
+                  </button>
+                  {/* Bouton de suppression */}
+                  {dates.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeDate(index)}
+                      className="px-2 py-1 text-xs text-red-500 hover:text-red-700"
+                      title="Supprimer cette date"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              {/* Champs de la date sur la même ligne */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Texte de la date */}
+                <div>
+                  <input
+                    type="text"
+                    value={dateItem.text}
+                    onChange={(e) => handleDateChange(index, 'text', e.target.value)}
+                    placeholder="Description de la date"
+                    className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                
+                {/* Date */}
+                <div>
+                  <input
+                    type="date"
+                    value={dateItem.date}
+                    onChange={(e) => handleDateChange(index, 'date', e.target.value)}
+                    className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
               </div>
             </div>
-            
-            {/* Texte de la date */}
-            <div className="mb-2">
-              <input
-                type="text"
-                value={dateItem.text}
-                onChange={(e) => handleDateChange(index, 'text', e.target.value)}
-                placeholder="Description de la date"
-                className="field mb-2"
-                required
-              />
-            </div>
-            
-            {/* Date */}
-            <div>
-              <input
-                type="date"
-                value={dateItem.date}
-                onChange={(e) => handleDateChange(index, 'date', e.target.value)}
-                className="field mb-2"
-                required
-              />
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
         
         <button
           type="button"
           onClick={addDate}
-          className="text-blick text-sm"
+          className="text-blick text-sm mt-3"
         >
           + Ajouter une date
         </button>
       </div>
 
       {/* Lien global (facultatif) */}
-      <div className="mb-4">
-        <label className="minilabel">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
           Lien global (optionnel)
         </label>
-        <div className="border border-gray-200 rounded-md p-3 bg-gray-100">
-          <div className="mb-2">
-            <input
-              type="text"
-              value={linkGlobalTxt}
-              onChange={(e) => handleLinkGlobalTxtChange(e.target.value)}
-              placeholder="Texte du lien (ex: Plus d'informations)"
-              className="field mb-2"
-            />
-          </div>
-          <div className="mb-2">
-            <input
-              type="url"
-              value={linkGlobalHref}
-              onChange={(e) => handleLinkGlobalHrefChange(e.target.value)}
-              placeholder="URL du lien (ex: https://example.com)"
-              className="field mb-2"
-            />
+        <div className="bg-gray-50 border border-gray-300 p-4 rounded-md space-y-4">
+          {/* Champs du lien sur la même ligne */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <input
+                type="text"
+                value={linkGlobalTxt}
+                onChange={(e) => handleLinkGlobalTxtChange(e.target.value)}
+                placeholder="Texte du lien (ex: Plus d'informations)"
+                className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <input
+                type="url"
+                value={linkGlobalHref}
+                onChange={(e) => handleLinkGlobalHrefChange(e.target.value)}
+                placeholder="URL du lien (ex: https://example.com)"
+                className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
           <div className="flex items-center">
             <input

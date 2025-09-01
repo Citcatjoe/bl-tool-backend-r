@@ -11,7 +11,12 @@ export function listenToEmbeds(callback) {
 }
 
 export async function fetchData() {
-  const embedsCol = collection(db, 'embeds');
-  const snapshot = await getDocs(embedsCol);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  // devMode doit être passé en paramètre
+  try {
+    const embedsCol = collection(db, 'embeds');
+    const snapshot = await getDocs(embedsCol);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    throw error;
+  }
 }
