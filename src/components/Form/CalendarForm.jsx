@@ -93,7 +93,7 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
     <div className="space-y-4">
       {/* Titre du calendrier */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-700 mb-3">
           Titre du calendrier *
         </label>
         <input
@@ -122,7 +122,7 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
                     type="button"
                     onClick={() => moveDateUp(index)}
                     disabled={index === 0}
-                    className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                    className="btn-form"
                     title="Déplacer vers le haut"
                   >
                     ↑
@@ -131,7 +131,7 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
                     type="button"
                     onClick={() => moveDateDown(index)}
                     disabled={index === dates.length - 1}
-                    className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                    className="btn-form"
                     title="Déplacer vers le bas"
                   >
                     ↓
@@ -141,7 +141,7 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
                     <button
                       type="button"
                       onClick={() => removeDate(index)}
-                      className="px-2 py-1 text-xs text-red-500 hover:text-red-700"
+                      className="btn-form btn-delete"
                       title="Supprimer cette date"
                     >
                       ×

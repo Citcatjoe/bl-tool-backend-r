@@ -23,9 +23,9 @@ function Header({ onLogout, typeFilter, onTypeFilterChange, user }) {
   }, [menuOpen]);
 
   // Handler pour les changements de filtre
-  const handleFilterClick = (filterType) => {
-    onTypeFilterChange(filterType);
-  };
+  // const handleFilterClick = (filterType) => {
+  //   onTypeFilterChange(filterType);
+  // };
 
   // Fonction pour déterminer les classes CSS selon l'état actif
   const getFilterClasses = (filterType) => {
@@ -37,7 +37,8 @@ function Header({ onLogout, typeFilter, onTypeFilterChange, user }) {
   return (
     <header className={`${s.header} bg-white fixed top-0 w-full bg-white border-b -mx-6 z-10`}>
       <img src={logo} alt="logo blick tools" className="absolute left-4 top-1/2 -translate-y-1/2"/>
-      <ul id="filter" className="font-blickr flex gap-10 h-full absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center">
+      <span className={s.appTitle}>Blick Tools</span>
+      {/* <ul id="filter" className="font-blickr flex gap-10 h-full absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center">
         <li 
           id="filter-all" 
           className={getFilterClasses('all')}
@@ -80,6 +81,20 @@ function Header({ onLogout, typeFilter, onTypeFilterChange, user }) {
         >
           Tinders
         </li>
+        <li 
+          id="filter-quiz" 
+          className={getFilterClasses('quiz')}
+          onClick={() => handleFilterClick('quiz')}
+        >
+          Quiz
+        </li>
+        <li 
+          id="filter-testimony" 
+          className={getFilterClasses('testimony')}
+          onClick={() => handleFilterClick('testimony')}
+        >
+          Témoignages
+        </li>
         {user?.email === 'cesargreppin@gmail.com' && (
           <li 
             id="filter-deleted"
@@ -89,7 +104,7 @@ function Header({ onLogout, typeFilter, onTypeFilterChange, user }) {
             Corbeille
           </li>
         )}
-      </ul>
+      </ul> */}
   <div id="menu-user" className="absolute top-0 right-0 h-full aspect-square" ref={menuUserRef}>
         <button
           id="menu-user-btn"

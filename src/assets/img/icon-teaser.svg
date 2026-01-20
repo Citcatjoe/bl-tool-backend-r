@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="40" viewBox="0 0 40 40">
   <defs>
     <clipPath id="clip-path">
-      <rect id="Rectangle_243" data-name="Rectangle 243" width="26.148" height="26.148" fill="#fed4d0"/>
+      <rect id="Rectangle_243" data-name="Rectangle 243" width="26.148" height="26.148" fill="#fca0a0"/>
     </clipPath>
   </defs>
   <g id="icon-teaser" transform="translate(-216 -504)">
     <rect id="Rectangle_250" data-name="Rectangle 250" width="40" height="40" rx="5" transform="translate(216 504)" fill="none"/>
     <g id="Groupe_4359" data-name="Groupe 4359" transform="translate(222.926 510.926)">
       <g id="Groupe_4354" data-name="Groupe 4354" clip-path="url(#clip-path)">
-        <path id="Tracé_69" data-name="Tracé 69" d="M26.148,26.148H0V0H26.148ZM7.344,4.663a2.814,2.814,0,1,0,2.7,3.939,2.807,2.807,0,0,0-2.7-3.939M23.35,22.431,15.894,10.276,11.077,18.03l-2.67-4.016L2.8,22.431Z" fill="#fed4d0"/>
+        <path id="Tracé_69" data-name="Tracé 69" d="M26.148,26.148H0V0H26.148ZM7.344,4.663a2.814,2.814,0,1,0,2.7,3.939,2.807,2.807,0,0,0-2.7-3.939M23.35,22.431,15.894,10.276,11.077,18.03l-2.67-4.016L2.8,22.431Z" fill="#fca0a0"/>
       </g>
     </g>
   </g>

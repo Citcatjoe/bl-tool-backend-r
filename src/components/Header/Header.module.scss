@@ -28,5 +28,20 @@
             transform: translateY(105%);
         }
     }
+
+    .appTitle
+    {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+      font-size: 24px;
+      font-weight: bold;
+      color: black;
+      opacity: .5;
+      font-family: blickextrabold;
+      font-weight: 700;
+      
+    }
   
 }

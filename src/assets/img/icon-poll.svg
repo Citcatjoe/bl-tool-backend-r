@@ -2,9 +2,9 @@
   <g id="icon-poll" transform="translate(-269 -504)">
     <rect id="Rectangle_251" data-name="Rectangle 251" width="40" height="40" rx="5" transform="translate(269 504)" fill="none"/>
     <g id="Groupe_4360" data-name="Groupe 4360" transform="translate(275.289 511.055)">
-      <rect id="Rectangle_244" data-name="Rectangle 244" width="27.421" height="6.473" transform="translate(0 9.708)" fill="#d0f8fe"/>
-      <rect id="Rectangle_245" data-name="Rectangle 245" width="23.501" height="6.473" transform="translate(0 -0.001)" fill="#d0f8fe"/>
-      <rect id="Rectangle_246" data-name="Rectangle 246" width="15.66" height="6.473" transform="translate(0 19.418)" fill="#d0f8fe"/>
+      <rect id="Rectangle_244" data-name="Rectangle 244" width="27.421" height="6.473" transform="translate(0 9.708)" fill="#a0f0fc"/>
+      <rect id="Rectangle_245" data-name="Rectangle 245" width="23.501" height="6.473" transform="translate(0 -0.001)" fill="#a0f0fc"/>
+      <rect id="Rectangle_246" data-name="Rectangle 246" width="15.66" height="6.473" transform="translate(0 19.418)" fill="#a0f0fc"/>
     </g>
   </g>
 </svg>

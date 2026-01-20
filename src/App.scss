@@ -7,6 +7,8 @@
 
 
 
+
+
 :root 
 {
     font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -180,11 +182,58 @@ body
 .btn-secondary
 {
     //font-family: Inter;
-    font-size: 16px;
+    //font-size: 16px;
     //color: $blick;
-    border-radius: 4px;
     cursor: pointer;
     transition: background 0.2s;
     font-weight: 00;
+    font-family: Inter;
+    font-weight: 400;
+
+    &:hover
+    {
+        background-color: lighten($blick, 52%);
+    }
 }
+
+.btn-form
+{
+    background: white;
+    //border: 1px solid #D1D5DB;
+    color: rgb(118, 118, 118);
+    font-size: 1rem;
+    padding: 0;
+    aspect-ratio: 1 / 1;
+    height: 30px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:disabled
+    {
+        color: rgb(118, 118, 118, .4);
+        cursor: not-allowed;
+    }
+
+    &:hover
+    {
+        background: darken(white, 5%);
+    }
+
+    &.btn-delete
+    {
+        color: $blick;
+        //background: $blick; // rouge
+
+        // &:hover
+        // {
+        //     background: darken($blick, 5%);
+        // }
+    }
+}
+
+
+
 

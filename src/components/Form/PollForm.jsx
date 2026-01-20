@@ -85,7 +85,7 @@ function PollForm({ currentEmbed, formMode, onChange }) {
                   <button
                     type="button"
                     onClick={() => removeAnswer(index)}
-                    className="px-2 py-1 text-xs text-red-500 hover:text-red-700"
+                    className="btn-form btn-delete"
                     title="Supprimer cette réponse"
                   >
                     ×

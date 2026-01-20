@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ImageUploader from '../ImageUploader';
 
 function TeaserForm({ currentEmbed, formMode, onChange }) {
   // States pour les champs du teaser
@@ -8,24 +9,32 @@ function TeaserForm({ currentEmbed, formMode, onChange }) {
   const [linkGlobalHref, setLinkGlobalHref] = useState('');
   const [linkGlobalNewTab, setLinkGlobalNewTab] = useState(false);
   const [img, setImg] = useState('');
+  const [oldImg, setOldImg] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
 
   // Initialisation des données en mode édition
   useEffect(() => {
     if (formMode === 'edit' && currentEmbed) {
       setTeaserLabel(currentEmbed.teaserLabel || '');
-      setTeaserTitle(currentEmbed.teaserTitle || '');
+      // Convertir \n en vrais retours à la ligne pour le textarea
+      const teaserTitleWithLineBreaks = (currentEmbed.teaserTitle || '').replace(/\\n/g, '\n');
+      setTeaserTitle(teaserTitleWithLineBreaks);
       setLinkGlobalTxt(currentEmbed.linkGlobalTxt || '');
       setLinkGlobalHref(currentEmbed.linkGlobalHref || '');
       setLinkGlobalNewTab(currentEmbed.linkGlobalNewTab || false);
       setImg(currentEmbed.img || '');
+      setOldImg(currentEmbed.img || '');
     }
   }, [formMode, currentEmbed]);
 
   // Notification des changements au parent
   useEffect(() => {
+    // Convertir les vrais retours à la ligne en \n pour la BDD
+    const teaserTitleForDb = teaserTitle.replace(/\n/g, '\\n');
     onChange({
       teaserLabel,
-      teaserTitle,
+      teaserTitle: teaserTitleForDb,
       linkGlobalTxt,
       linkGlobalHref,
       linkGlobalNewTab,
@@ -34,6 +43,7 @@ function TeaserForm({ currentEmbed, formMode, onChange }) {
     });
   }, [teaserLabel, teaserTitle, linkGlobalTxt, linkGlobalHref, linkGlobalNewTab, img, onChange]);
 
+  // ...existing code...
   return (
     <div className="space-y-4">
       {/* Label du teaser */}
@@ -56,31 +66,28 @@ function TeaserForm({ currentEmbed, formMode, onChange }) {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Titre du teaser *
         </label>
-        <input
-          type="text"
+        <textarea
           value={teaserTitle}
           onChange={(e) => setTeaserTitle(e.target.value)}
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Ex: Découvrez notre nouvelle gamme"
+          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[115px]"
+          placeholder="Ex: Découvrez notre nouvelle gamme&#10;Vous pouvez utiliser plusieurs lignes"
+          rows={3}
           required
         />
       </div>
 
       {/* Image du teaser */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Image du teaser
-        </label>
-        <input
-          type="text"
-          value={img}
-          onChange={(e) => setImg(e.target.value)}
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Ex: teaser-product.jpg"
+        <ImageUploader
+          initialUrl={img}
+          oldUrl={oldImg}
+          label="Image du teaser"
+          disabled={false}
+          onUpload={(url) => {
+            setImg(url);
+            setOldImg(url);
+          }}
         />
-        <p className="text-xs text-gray-500 mt-2">
-          Nom du fichier image (à uploader manuellement sur le serveur)
-        </p>
       </div>
 
       {/* Section Bouton d'action */}
@@ -88,7 +95,7 @@ function TeaserForm({ currentEmbed, formMode, onChange }) {
         <h3 className="block text-sm font-medium text-gray-700 mb-3">Bouton d'action</h3>
         <div className="bg-gray-50 border border-gray-300 p-4 rounded-md space-y-4">
           {/* Champs du bouton sur la même ligne */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4"> 
             {/* Texte du bouton */}
             <div>
               <input

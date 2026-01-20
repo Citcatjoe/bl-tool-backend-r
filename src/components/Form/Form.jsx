@@ -5,7 +5,10 @@ import CalendarForm from './CalendarForm';
 import TeaserForm from './TeaserForm';
 import FolderForm from './FolderForm';
 import TinderForm from './TinderForm';
-import { collection, addDoc, updateDoc, doc, serverTimestamp, runTransaction } from 'firebase/firestore';
+import QuizForm from './QuizForm';
+import TestimonyForm from './TestimonyForm';
+import PotmForm from './PotmForm';
+import { collection, addDoc, updateDoc, doc, serverTimestamp, runTransaction, Timestamp } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { getAuth } from 'firebase/auth';
 
@@ -21,12 +24,18 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
       if (formType === 'teaser') return 'Nouveau teaser';
       if (formType === 'folder') return 'Nouveau dossier';
       if (formType === 'tinder') return 'Nouveau Tinder';
+      if (formType === 'quiz') return 'Nouveau quiz';
+      if (formType === 'testimony') return 'Nouvel appel à témoignage';
+      if (formType === 'potm') return 'Nouveau·elle joueur·euse du match';
     } else if (formMode === 'edit') {
       if (formType === 'poll') return 'Éditer le sondage';
       if (formType === 'calendar') return 'Éditer le calendrier';
       if (formType === 'teaser') return 'Éditer le teaser';
       if (formType === 'folder') return 'Éditer le dossier';
       if (formType === 'tinder') return 'Éditer le tinder';
+      if (formType === 'quiz') return 'Éditer le quiz';
+      if (formType === 'testimony') return 'Éditer l\'appel à témoignage';
+      if (formType === 'potm') return 'Éditer le/la joueur·euse du match';
     }
     return 'Formulaire';
   };
@@ -138,6 +147,10 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           alert('Un teaser doit avoir un label et un titre');
           return;
         }
+        if (!formData.img) {
+          alert('Un teaser doit avoir une image uploadée');
+          return;
+        }
 
         saveData = {
           type: 'teaser',
@@ -241,6 +254,221 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           saveData.author = currentUser.email;
           saveData.deleted = false;
         }
+      } else if (formData.type === 'quiz') {
+        // Validation minimale
+        if (!formData.title || formData.title.trim() === '') {
+          alert('Un quiz doit avoir un titre');
+          return;
+        }
+
+        if (!formData.statsQuestions || !Array.isArray(formData.statsQuestions) || formData.statsQuestions.length !== formData.questions.length) {
+          alert('Le tableau statsQuestions doit être synchronisé avec questions');
+          return;
+        }
+
+        // Validation : chaque question doit avoir un texte non vide
+        if (!formData.questions || !Array.isArray(formData.questions) || formData.questions.some(q => !q.text || q.text.trim() === '')) {
+          alert('Chaque question doit avoir un énoncé');
+          return;
+        }
+
+        // Validation : chaque question doit proposer 4 réponses non vides
+        if (formData.questions.some(q => !q.answers || q.answers.length !== 4 || q.answers.some(a => !a.text || a.text.trim() === ''))) {
+          alert('Les questions doivent proposer 4 possibilités de réponses');
+          return;
+        }
+
+        // Validation : chaque question doit avoir une réponse correcte
+        if (formData.questions.some(q => !q.answers.some(a => a.isCorrect))) {
+          alert('Une des quatre propositions de réponse doit être définie comme correcte');
+          return;
+        }
+
+        // Validation : les trois champs de conclusion doivent être remplis
+        const conclusion = formData.conclusion || { text1: '', text2: '', text3: '' };
+        if (!conclusion.text1 || conclusion.text1.trim() === '' || !conclusion.text2 || conclusion.text2.trim() === '' || !conclusion.text3 || conclusion.text3.trim() === '') {
+          alert('Les trois champs de conclusion doivent être remplis');
+          return;
+        }
+
+        // Gestion de statsGlobal.scoreDistribution
+        let scoreDistribution = {};
+        const n = formData.questions.length;
+        let statsQuestionsToSave = formData.statsQuestions;
+        if (formMode === 'create') {
+          // Initialiser n+1 clés à 0
+          for (let i = 0; i <= n; i++) {
+            scoreDistribution[i] = 0;
+          }
+        } else if (formMode === 'edit') {
+          // Récupérer l'existant
+          const prevScoreDist = currentEmbed?.statsGlobal?.scoreDistribution || {};
+          // Synchroniser toutes les clés de 0 à n
+          scoreDistribution = { ...prevScoreDist };
+          // Ajout des clés manquantes
+          for (let i = 0; i <= n; i++) {
+            if (!(i in scoreDistribution)) {
+              scoreDistribution[i] = 0;
+            }
+          }
+          // Suppression des clés en trop
+          Object.keys(scoreDistribution)
+            .map(k => parseInt(k))
+            .filter(k => k < 0 || k > n)
+            .forEach(k => { delete scoreDistribution[k]; });
+
+          // Préserver statsQuestions si le nombre de questions n'a pas changé
+          if (currentEmbed?.statsQuestions && Array.isArray(currentEmbed.statsQuestions) && currentEmbed.statsQuestions.length === n) {
+            statsQuestionsToSave = currentEmbed.statsQuestions;
+          }
+        }
+        saveData = {
+          type: 'quiz',
+          title: formData.title || '',
+          questions: formData.questions,
+          statsQuestions: statsQuestionsToSave,
+          statsGlobal: {
+            scoreDistribution,
+          },
+          conclusion,
+        };
+        if (formMode === 'create') {
+          saveData.author = currentUser.email;
+          saveData.deleted = false;
+          saveData.timeCreated = serverTimestamp();
+        }
+        // Toujours mettre à jour timeUpdated
+        saveData.timeUpdated = serverTimestamp();
+      } else if (formData.type === 'testimony') {
+        // Validation spécifique aux témoignages
+        if (!formData.title || formData.title.trim() === '') {
+          alert('Un appel à témoignage doit avoir un titre d\'élément');
+          return;
+        }
+
+        if (!formData.content || !formData.content.title || formData.content.title.trim() === '') {
+          alert('Un appel à témoignage doit avoir un titre d\'appel');
+          return;
+        }
+
+        if (!formData.content.subject || formData.content.subject.trim() === '') {
+          alert('Un appel à témoignage doit avoir un sujet');
+          return;
+        }
+
+        if (!formData.content.question || formData.content.question.trim() === '') {
+          alert('Un appel à témoignage doit avoir une question');
+          return;
+        }
+
+        // Conversion de timeExpires en Timestamp Firebase si défini
+        let timeExpiresTimestamp = null;
+        if (formData.content.timeExpires && formData.content.timeExpires.trim() !== '') {
+          try {
+            // Convertir la string datetime-local en Date puis en Timestamp Firebase
+            const dateObj = new Date(formData.content.timeExpires);
+            if (!isNaN(dateObj.getTime())) {
+              timeExpiresTimestamp = Timestamp.fromDate(dateObj);
+            }
+          } catch (error) {
+            console.warn('Erreur lors de la conversion de timeExpires:', error);
+          }
+        }
+
+        saveData = {
+          type: 'testimony',
+          title: formData.title.trim(),
+          content: {
+            title: formData.content.title.trim(),
+            subject: formData.content.subject.trim(),
+            question: formData.content.question.trim(),
+            timeExpires: timeExpiresTimestamp
+          }
+        };
+
+        if (formMode === 'create') {
+          saveData.author = currentUser.email;
+          saveData.deleted = false;
+          saveData.timeCreated = serverTimestamp();
+        }
+        // Toujours mettre à jour timeUpdated
+        saveData.timeUpdated = serverTimestamp();
+      } else if (formData.type === 'potm') {
+        // Validation spécifique au joueur du match
+        if (!formData.context || !formData.context.sport || !formData.context.category) {
+          alert('Le sport et la catégorie doivent être renseignés');
+          return;
+        }
+
+        if (!formData.context.text || formData.context.text.trim() === '') {
+          alert('Le label du match doit être renseigné');
+          return;
+        }
+
+        if (!formData.context.date || (typeof formData.context.date === 'string' && formData.context.date.trim() === '')) {
+          alert('La date du match doit être renseignée');
+          return;
+        }
+
+        if (!formData.players || !Array.isArray(formData.players) || formData.players.length < 2) {
+          alert('Il faut au moins 2 candidats');
+          return;
+        }
+
+        // Vérifier que tous les joueurs ont un nom
+        const validPlayers = formData.players.filter(player => player.name && player.name.trim() !== '');
+        if (validPlayers.length < 2) {
+          alert('Au moins 2 candidats doivent avoir un nom');
+          return;
+        }
+
+        // Conversion de la date en Timestamp Firebase
+        let matchDateTimestamp = null;
+        try {
+          // Ajouter l'heure à midi pour avoir un timestamp complet
+          const dateObj = new Date(formData.context.date + 'T12:00:00');
+          if (!isNaN(dateObj.getTime())) {
+            matchDateTimestamp = Timestamp.fromDate(dateObj);
+          }
+        } catch (error) {
+          console.warn('Erreur lors de la conversion de la date:', error);
+          alert('Format de date invalide');
+          return;
+        }
+
+        // Préserver les votes existants en mode édition
+        const playersToSave = validPlayers.map((player) => {
+          // Les votes sont déjà présents dans l'objet player du formulaire
+          // car PotmForm les charge depuis currentEmbed en mode édition
+          return {
+            id: player.id, // Préserver l'ID pour le matching futur
+            name: player.name.trim(),
+            position: player.position,
+            team: player.team,
+            votes: player.votes || 0
+          };
+        });
+
+        saveData = {
+          type: 'potm',
+          context: {
+            sport: formData.context.sport,
+            category: formData.context.category,
+            text: formData.context.text.trim(),
+            date: matchDateTimestamp
+          },
+          players: playersToSave,
+          counterViews: formMode === 'create' ? 0 : (currentEmbed?.counterViews || 0),
+          totalVotes: formMode === 'create' ? 0 : (currentEmbed?.totalVotes || 0)
+        };
+
+        if (formMode === 'create') {
+          saveData.author = currentUser.email;
+          saveData.deleted = false;
+          saveData.timeCreated = serverTimestamp();
+        }
+        // Toujours mettre à jour timeUpdated
+        saveData.timeUpdated = serverTimestamp();
       }
 
       // Sauvegarde selon le mode
@@ -255,6 +483,9 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         else if (formData.type === 'teaser') successMessage = 'Teaser créé avec succès !';
         else if (formData.type === 'folder') successMessage = 'Dossier créé avec succès !';
         else if (formData.type === 'tinder') successMessage = 'Tinder créé avec succès !';
+        else if (formData.type === 'quiz') successMessage = 'Quiz créé avec succès !';
+        else if (formData.type === 'testimony') successMessage = 'Appel à témoignage créé avec succès !';
+        else if (formData.type === 'potm') successMessage = 'Joueur·euse du match créé·e avec succès !';
         
         alert(successMessage);
         
@@ -271,7 +502,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         
         const docRef = doc(db, 'embeds', currentEmbed.id);
         
-        // Pour les dossiers, utiliser une transaction pour préserver buttonCounterClicks
+        // Pour les dossiers et potm, utiliser une transaction pour préserver les compteurs
         if (formData.type === 'folder') {
           await runTransaction(db, async (transaction) => {
             // Lire le document actuel
@@ -322,6 +553,48 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             transaction.update(docRef, updatedSaveData);
           });
           console.log('Dossier mis à jour avec transaction:', currentEmbed.id);
+        } else if (formData.type === 'potm') {
+          await runTransaction(db, async (transaction) => {
+            // Lire le document actuel pour obtenir les votes à jour
+            const currentDoc = await transaction.get(docRef);
+            if (!currentDoc.exists()) {
+              throw new Error('Le document n\'existe pas');
+            }
+            
+            const currentData = currentDoc.data();
+            const currentPlayers = currentData.players || [];
+            
+            // Fusionner les joueurs en préservant les votes actuels
+            const mergedPlayers = saveData.players.map((newPlayer) => {
+              // Chercher le joueur existant par ID (prioritaire) ou par nom (fallback)
+              let existingPlayer = null;
+              if (newPlayer.id) {
+                existingPlayer = currentPlayers.find(p => p.id === newPlayer.id);
+              }
+              // Fallback: chercher par nom si pas d'ID ou pas trouvé
+              if (!existingPlayer) {
+                existingPlayer = currentPlayers.find(p => p.name === newPlayer.name);
+              }
+              
+              return {
+                ...newPlayer,
+                // Préserver les votes s'ils existent, sinon 0
+                votes: existingPlayer?.votes || 0
+              };
+            });
+            
+            // Préserver aussi totalVotes et counterViews actuels
+            const updatedSaveData = {
+              ...saveData,
+              players: mergedPlayers,
+              totalVotes: currentData.totalVotes || 0,
+              counterViews: currentData.counterViews || 0
+            };
+            
+            // Effectuer la mise à jour transactionnelle
+            transaction.update(docRef, updatedSaveData);
+          });
+          console.log('POTM mis à jour avec transaction:', currentEmbed.id);
         } else {
           // Pour les autres types, mise à jour classique
           await updateDoc(docRef, saveData);
@@ -334,6 +607,9 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         else if (formData.type === 'teaser') successMessage = 'Teaser modifié avec succès !';
         else if (formData.type === 'folder') successMessage = 'Dossier modifié avec succès !';
         else if (formData.type === 'tinder') successMessage = 'Tinder modifié avec succès !';
+        else if (formData.type === 'quiz') successMessage = 'Quiz modifié avec succès !';
+        else if (formData.type === 'testimony') successMessage = 'Appel à témoignage modifié avec succès !';
+        else if (formData.type === 'potm') successMessage = 'Joueur·euse du match modifié·e avec succès !';
         
         alert(successMessage);
         
@@ -413,6 +689,30 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {formType === 'tinder' && (
           <TinderForm
+            currentEmbed={currentEmbed}
+            formMode={formMode}
+            onChange={handleFormDataChange}
+          />
+        )}
+
+        {formType === 'quiz' && (
+          <QuizForm
+            currentEmbed={currentEmbed}
+            formMode={formMode}
+            onChange={handleFormDataChange}
+          />
+        )}
+
+        {formType === 'testimony' && (
+          <TestimonyForm
+            currentEmbed={currentEmbed}
+            formMode={formMode}
+            onChange={handleFormDataChange}
+          />
+        )}
+
+        {formType === 'potm' && (
+          <PotmForm
             currentEmbed={currentEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}

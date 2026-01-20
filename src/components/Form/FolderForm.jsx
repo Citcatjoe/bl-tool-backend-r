@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ImageUploader from '../ImageUploader';
 
 function FolderForm({ currentEmbed, formMode, onChange }) {
   const [folderName, setFolderName] = useState('');
@@ -12,7 +13,9 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
   // Charger les données existantes en mode édition
   useEffect(() => {
     if (formMode === 'edit' && currentEmbed) {
-      setFolderName(currentEmbed.folderName || '');
+      // Convertir \n en vrais retours à la ligne pour le textarea
+      const folderNameWithLineBreaks = (currentEmbed.folderName || '').replace(/\\n/g, '\n');
+      setFolderName(folderNameWithLineBreaks);
       setFolderLabel(currentEmbed.folderLabel || '');
       setFolderLabelColor(currentEmbed.folderLabelColor || 'bg-brand');
       setImg(currentEmbed.img || '');
@@ -22,9 +25,11 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
 
   // Fonction pour remonter les données au composant parent
   useEffect(() => {
+    // Convertir les vrais retours à la ligne en \n pour la BDD
+    const folderNameForDb = folderName.replace(/\n/g, '\\n');
     const formData = {
       type: 'folder',
-      folderName,
+      folderName: folderNameForDb,
       folderLabel,
       folderLabelColor,
       img,
@@ -71,12 +76,12 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Titre du dossier *
         </label>
-        <input
-          type="text"
+        <textarea
           value={folderName}
           onChange={(e) => setFolderName(e.target.value)}
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Entrez le titre du dossier"
+          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[115px]"
+          placeholder="Entrez le titre du dossier&#10;Vous pouvez utiliser plusieurs lignes"
+          rows={3}
           required
         />
       </div>
@@ -102,52 +107,51 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
           Couleur du label *
         </label>
         <div className="space-y-3">
-          <div className="flex items-center">
-            <input
-              type="radio"
-              id="color-blick"
-              name="folderLabelColor"
-              value="bg-brand"
-              checked={folderLabelColor === 'bg-brand'}
-              onChange={(e) => setFolderLabelColor(e.target.value)}
-              className="mr-3"
-            />
-            <label htmlFor="color-blick" className="flex items-center">
-              <span className="inline-block w-4 h-4 bg-blue-600 rounded mr-2"></span>
-              Blick (bg-brand)
-            </label>
-          </div>
-          <div className="flex items-center">
-            <input
-              type="radio"
-              id="color-sport"
-              name="folderLabelColor"
-              value="bg-sport"
-              checked={folderLabelColor === 'bg-sport'}
-              onChange={(e) => setFolderLabelColor(e.target.value)}
-              className="mr-3"
-            />
-            <label htmlFor="color-sport" className="flex items-center">
-              <span className="inline-block w-4 h-4 bg-green-600 rounded mr-2"></span>
-              Sport (bg-sport)
-            </label>
+          <div className="flex items-center gap-8">
+            <div className="flex items-center">
+              <input
+                type="radio"
+                id="color-blick"
+                name="folderLabelColor"
+                value="bg-brand"
+                checked={folderLabelColor === 'bg-brand'}
+                onChange={(e) => setFolderLabelColor(e.target.value)}
+                className="mr-3"
+              />
+              <label htmlFor="color-blick" className="flex items-center">
+                <span className="inline-block w-4 h-4 bg-blick rounded mr-2"></span>
+                Blick (bg-brand)
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="radio"
+                id="color-sport"
+                name="folderLabelColor"
+                value="bg-sport"
+                checked={folderLabelColor === 'bg-sport'}
+                onChange={(e) => setFolderLabelColor(e.target.value)}
+                className="mr-3"
+              />
+              <label htmlFor="color-sport" className="flex items-center">
+                <span className="inline-block w-4 h-4 bg-green-600 rounded mr-2"></span>
+                Sport (bg-sport)
+              </label>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Image */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Image (nom du fichier)
-        </label>
-        <input
-          type="text"
-          value={img}
-          onChange={(e) => setImg(e.target.value)}
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="exemple: image.jpg"
+        <ImageUploader
+          type="folder"
+          initialUrl={img}
+          oldUrl={formMode === 'edit' ? img : ''}
+          label="Image du dossier"
+          disabled={false}
+          onUpload={setImg}
         />
-        
       </div>
 
       {/* Boutons */}
@@ -162,33 +166,31 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
               <div className="flex justify-between items-center mb-3">
                 <h4 className="text-sm font-medium text-gray-700">Bouton {index + 1}</h4>
                 <div className="flex gap-2">
-                  {/* Boutons de déplacement */}
-                  {index > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => moveButton(index, 'up')}
-                      className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30"
-                      title="Monter"
-                    >
-                      ↑
-                    </button>
-                  )}
-                  {index < buttons.length - 1 && (
-                    <button
-                      type="button"
-                      onClick={() => moveButton(index, 'down')}
-                      className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30"
-                      title="Descendre"
-                    >
-                      ↓
-                    </button>
-                  )}
-                  {/* Bouton de suppression */}
+                  {/* Boutons de déplacement toujours présents, désactivés si inutilisables */}
+                  <button
+                    type="button"
+                    onClick={() => moveButton(index, 'up')}
+                    className="btn-form"
+                    title="Monter"
+                    disabled={index === 0}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveButton(index, 'down')}
+                    className="btn-form"
+                    title="Descendre"
+                    disabled={index === buttons.length - 1}
+                  >
+                    ↓
+                  </button>
+                  {/* Bouton de suppression masqué si un seul bouton */}
                   {buttons.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeButton(index)}
-                      className="px-2 py-1 text-xs text-red-500 hover:text-red-700"
+                      className="btn-form btn-delete"
                     >
                       ×
                     </button>

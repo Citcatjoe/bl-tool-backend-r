@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <g id="icon-jersey" transform="translate(-320 -504)">
+    <rect id="Rectangle_252" data-name="Rectangle 252" width="40" height="40" rx="5" transform="translate(320 504)" fill="none"/>
+    <g id="shape" transform="translate(322.722 511.032)">
+      <path id="Tracé_3335" data-name="Tracé 3335" d="M96.943,0a4.362,4.362,0,0,0,3.808,4.287A4.344,4.344,0,0,0,105.6,0h4.32l5.169,5.187-5.178,5.182V25.936H92.633V10.388l-5.178-5.2L92.624,0Zm7.79,6.9h-6.92v8.659h6.92Z" transform="translate(-83.995 0.001)" fill="#70af4d"/>
+      <path id="Tracé_3336" data-name="Tracé 3336" d="M1.926,169.407l5.169,5.172-1.926,1.944L0,171.351Z" transform="translate(0 -162.705)" fill="#70af4d"/>
+      <path id="Tracé_3337" data-name="Tracé 3337" d="M699.315,169.407l1.926,1.944-5.169,5.172-1.926-1.944Z" transform="translate(-666.685 -162.705)" fill="#70af4d"/>
+      <rect id="Rectangle_1584" data-name="Rectangle 1584" width="2.59" height="4.31" transform="translate(15.973 9.074)" fill="#70af4d"/>
+    </g>
+  </g>
+</svg>
