@@ -3,8 +3,10 @@ import React, { useState, useEffect } from 'react';
 function CalendarForm({ currentEmbed, formMode, onChange }) {
   // States pour les champs du calendrier
   const [calName, setCalName] = useState('');
+  const [calWording, setCalWording] = useState('');
+  const [nbElements, setNbElements] = useState(3);
   const [dates, setDates] = useState([
-    { text: '', date: '' }
+    { id: Math.random().toString(36).substr(2, 9), text: '', date: '', endDate: '', showBadge: false, liveLinkEnabled: false, liveLinkUrl: '' }
   ]);
   const [linkGlobalTxt, setLinkGlobalTxt] = useState('');
   const [linkGlobalHref, setLinkGlobalHref] = useState('');
@@ -14,19 +16,54 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
   useEffect(() => {
     if (formMode === 'edit' && currentEmbed) {
       setCalName(currentEmbed.calName || '');
-      setDates(currentEmbed.dates || currentEmbed.events || [
-        { text: '', date: '' }
-      ]);
-      // Support de l'ancien format globalLink et du nouveau format
-      if (currentEmbed.globalLink) {
-        setLinkGlobalTxt(currentEmbed.globalLink.text || '');
-        setLinkGlobalHref(currentEmbed.globalLink.url || '');
-        setLinkGlobalNewTab(false); // valeur par défaut pour l'ancien format
+      setCalWording(currentEmbed.calWording || '');
+      // Map nbElemsToShow -> nbElements
+      setNbElements(currentEmbed.nbElemsToShow || 3);
+      
+      const formatDateForInput = (timestampOrDate) => {
+        if (!timestampOrDate) return '';
+        let d = timestampOrDate;
+        if (d.toDate) d = d.toDate(); // Handle Firestore Timestamp
+        if (typeof d === 'string') d = new Date(d); // Handle string
+        
+        if (isNaN(d.getTime())) return '';
+
+        // Format to YYYY-MM-DDTHH:mm for input type="datetime-local"
+        const pad = (n) => n < 10 ? '0' + n : n;
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      };
+
+      const initialDates = currentEmbed.dates || [];
+      if (initialDates.length > 0) {
+        const mappedDates = initialDates.map((d, i) => ({
+          id: d.id || Math.random().toString(36).substr(2, 9),
+          text: d.text || '',
+          // Map scheduleStart -> date
+          date: formatDateForInput(d.scheduleStart || d.date), 
+          // Map scheduleEnd -> endDate
+          endDate: formatDateForInput(d.scheduleEnd || d.endDate),
+          showBadge: d.showBadge || false,
+          // Map liveLinkExists -> liveLinkEnabled
+          liveLinkEnabled: d.liveLinkExists || d.liveLinkEnabled || false,
+          liveLinkUrl: d.liveLinkUrl || ''
+        }));
+
+        // Sort dates chronologically
+        mappedDates.sort((a, b) => {
+          if (!a.date && !b.date) return 0;
+          if (!a.date) return 1; // Empty dates at the end
+          if (!b.date) return -1;
+          return a.date.localeCompare(b.date);
+        });
+
+        setDates(mappedDates);
       } else {
-        setLinkGlobalTxt(currentEmbed.linkGlobalTxt || '');
-        setLinkGlobalHref(currentEmbed.linkGlobalHref || '');
-        setLinkGlobalNewTab(currentEmbed.linkGlobalNewTab || false);
+        setDates([{ id: Math.random().toString(36).substr(2, 9), text: '', date: '', endDate: '', showBadge: false, liveLinkEnabled: false, liveLinkUrl: '' }]);
       }
+
+      setLinkGlobalTxt(currentEmbed.linkGlobalTxt || '');
+      setLinkGlobalHref(currentEmbed.linkGlobalHref || '');
+      setLinkGlobalNewTab(currentEmbed.linkGlobalNewTab || false);
     }
   }, [formMode, currentEmbed]);
 
@@ -34,13 +71,15 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
   useEffect(() => {
     onChange({
       calName,
+      calWording,
+      nbElements,
       dates,
       linkGlobalTxt,
       linkGlobalHref,
       linkGlobalNewTab,
       type: 'calendar'
     });
-  }, [calName, dates, linkGlobalTxt, linkGlobalHref, linkGlobalNewTab]); // Suppression de onChange des dépendances
+  }, [calName, calWording, nbElements, dates, linkGlobalTxt, linkGlobalHref, linkGlobalNewTab, onChange]);
 
   // Gestion des dates
   const handleDateChange = (index, field, value) => {
@@ -50,7 +89,7 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
   };
 
   const addDate = () => {
-    setDates([...dates, { text: '', date: '' }]);
+    setDates([...dates, { id: Math.random().toString(36).substr(2, 9), text: '', date: '', endDate: '', showBadge: false, liveLinkEnabled: false, liveLinkUrl: '' }]);
   };
 
   const removeDate = (index) => {
@@ -90,35 +129,62 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Titre du calendrier */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">
-          Titre du calendrier *
-        </label>
-        <input
-          type="text"
-          value={calName}
-          onChange={(e) => setCalName(e.target.value)}
-          placeholder="Titre de votre calendrier"
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
+    <div className="space-y-6">
+      {/* Section 1 : Titre et Wording */}
+      <div className="flex gap-4">
+        <div className="w-[45%]">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Titre du calendrier *
+          </label>
+          <input
+            type="text"
+            value={calName}
+            onChange={(e) => setCalName(e.target.value)}
+            placeholder="Matchs de poules Suisse - Mondial 2026"
+            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+        <div className="w-[45%]">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Wording du calendrier
+          </label>
+          <input
+            type="text"
+            value={calWording}
+            onChange={(e) => setCalWording(e.target.value)}
+            placeholder="Ex: Ne ratez aucun match de la Nati"
+            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div className="w-[10%]">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Nb start
+          </label>
+          <select
+            value={nbElements}
+            onChange={(e) => setNbElements(parseInt(e.target.value, 10))}
+            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+              <option key={num} value={num}>{num}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* Dates (couples texte + date) */}
+      {/* Section 2 : Dates (couples texte + date + options) */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
           Dates *
         </label>
         <div className="space-y-4">
           {dates.map((dateItem, index) => (
-            <div key={index} className="border border-gray-300 rounded-md p-4 bg-gray-50">
+            <div key={dateItem.id} className="border border-gray-300 rounded-md p-4 bg-gray-50">
               <div className="flex justify-between items-center mb-3">
                 <span className="text-sm font-medium text-gray-700">Date {index + 1}</span>
                 <div className="flex gap-2">
-                  {/* Boutons de réorganisation */}
-                  <button
+                  {/* <button
                     type="button"
                     onClick={() => moveDateUp(index)}
                     disabled={index === 0}
@@ -135,8 +201,7 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
                     title="Déplacer vers le bas"
                   >
                     ↓
-                  </button>
-                  {/* Bouton de suppression */}
+                  </button> */}
                   {dates.length > 1 && (
                     <button
                       type="button"
@@ -150,30 +215,97 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
                 </div>
               </div>
               
-              {/* Champs de la date sur la même ligne */}
-              <div className="grid grid-cols-2 gap-4">
-                {/* Texte de la date */}
+              {/* Champs principaux : Label, Date, Terminé */}
+              <div className="grid grid-cols-2 gap-4 mb-2">
+                {/* Libellé (50%) */}
                 <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Wording 
+                  </label>
                   <input
                     type="text"
                     value={dateItem.text}
                     onChange={(e) => handleDateChange(index, 'text', e.target.value)}
-                    placeholder="Description de la date"
+                    placeholder="Ex: Suisse - France"
                     className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
                 
-                {/* Date */}
-                <div>
-                  <input
-                    type="date"
-                    value={dateItem.date}
-                    onChange={(e) => handleDateChange(index, 'date', e.target.value)}
-                    className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+                {/* Dates (Start + End) aligned with column 2 */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Date Début (25%) */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Start
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={dateItem.date}
+                      onChange={(e) => handleDateChange(index, 'date', e.target.value)}
+                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  {/* Date Fin (25%) */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      End {dateItem.showBadge && '*'}
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={dateItem.endDate}
+                      onChange={(e) => handleDateChange(index, 'endDate', e.target.value)}
+                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required={dateItem.showBadge}
+                    />
+                  </div>
                 </div>
+              </div>
+
+              {/* Options : Badges et Live Link */}
+              <div className="grid grid-cols-2 gap-4 items-start">
+                {/* Checkboxes */}
+                <div className="flex flex-row gap-6 pt-2">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id={`showBadge-${index}`}
+                      checked={dateItem.showBadge}
+                      onChange={(e) => handleDateChange(index, 'showBadge', e.target.checked)}
+                      className="mr-2"
+                    />
+                    <label htmlFor={`showBadge-${index}`} className="text-sm text-gray-700 select-none">
+                      Afficher les badges
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id={`liveLink-${index}`}
+                      checked={dateItem.liveLinkEnabled}
+                      onChange={(e) => handleDateChange(index, 'liveLinkEnabled', e.target.checked)}
+                      className="mr-2"
+                    />
+                    <label htmlFor={`liveLink-${index}`} className="text-sm text-gray-700 select-none">
+                      Activer un lien live
+                    </label>
+                  </div>
+                </div>
+
+                {/* Champ URL Live conditionnel */}
+                {dateItem.liveLinkEnabled && (
+                  <div>
+                    <input
+                      type="url"
+                      value={dateItem.liveLinkUrl}
+                      onChange={(e) => handleDateChange(index, 'liveLinkUrl', e.target.value)}
+                      placeholder="URL du live"
+                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -182,50 +314,57 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
         <button
           type="button"
           onClick={addDate}
-          className="text-blick text-sm mt-3"
+          className="text-blick text-sm mt-3 font-medium hover:underline"
         >
           + Ajouter une date
         </button>
       </div>
 
-      {/* Lien global (facultatif) */}
+      {/* Section 3 : Lien global */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
-          Lien global (optionnel)
+          Lien global
         </label>
-        <div className="bg-gray-50 border border-gray-300 p-4 rounded-md space-y-4">
+        <div className="bg-gray-50 border border-gray-300 p-4 rounded-md">
           {/* Champs du lien sur la même ligne */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className="flex gap-4 items-center">
+            <div className="w-1/2">
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Texte de lien global
+              </label>
               <input
                 type="text"
                 value={linkGlobalTxt}
                 onChange={(e) => handleLinkGlobalTxtChange(e.target.value)}
-                placeholder="Texte du lien (ex: Plus d'informations)"
+                placeholder="Vers la billeterie"
                 className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div>
+            <div className="w-1/2">
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Url du lien global
+              </label>
               <input
                 type="url"
                 value={linkGlobalHref}
                 onChange={(e) => handleLinkGlobalHrefChange(e.target.value)}
-                placeholder="URL du lien (ex: https://example.com)"
+                placeholder="www.billeterie.com"
                 className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-          </div>
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="linkGlobalNewTab"
-              checked={linkGlobalNewTab}
-              onChange={(e) => handleLinkGlobalNewTabChange(e.target.checked)}
-              className="mr-2"
-            />
-            <label htmlFor="linkGlobalNewTab" className="text-sm text-gray-700">
-              Ouvrir dans une nouvelle fenêtre
-            </label>
+            {/* Checkbox alignée */}
+            <div className="flex items-center mt-5">
+              <input
+                type="checkbox"
+                id="linkGlobalNewTab"
+                checked={linkGlobalNewTab}
+                onChange={(e) => handleLinkGlobalNewTabChange(e.target.checked)}
+                className="mr-2 h-4 w-4"
+              />
+              <label htmlFor="linkGlobalNewTab" className="text-sm text-gray-700 whitespace-nowrap select-none">
+                Nouvel onglet
+              </label>
+            </div>
           </div>
         </div>
       </div>

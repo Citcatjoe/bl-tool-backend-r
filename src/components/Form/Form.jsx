@@ -112,27 +112,82 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         
       } else if (formData.type === 'calendar') {
         // Validation spécifique aux calendriers
-        if (!formData.calName || !formData.dates || formData.dates.length === 0) {
-          alert('Un calendrier doit avoir un titre et au moins une date');
+        if (!formData.calName) {
+          alert('Un calendrier doit avoir un titre');
+          return;
+        }
+        if (!formData.dates || formData.dates.length === 0) {
+          alert('Un calendrier doit avoir au moins une date');
           return;
         }
 
-        // Vérifier que toutes les dates ont un texte et une date
-        const hasEmptyDates = formData.dates.some(date => !date.text || !date.date);
-        if (hasEmptyDates) {
-          alert('Toutes les dates doivent avoir un texte et une date');
+        // Vérifier que toutes les dates ont un texte et une date de début
+        // Et si showBadge est true, une date de fin est requise
+        const hasInvalidDates = formData.dates.some(date => {
+          if (!date.text || !date.date) return true;
+          if (date.showBadge && !date.endDate) return true;
+          return false;
+        });
+
+        if (hasInvalidDates) {
+          alert('Toutes les dates doivent avoir un libellé et une date de début. Si "Afficher les badges" est coché, la date de fin est obligatoire.');
           return;
         }
+
+        // Vérifier que si liveLinkEnabled est true, liveLinkUrl est rempli
+        const hasInvalidLiveLinks = formData.dates.some(date => date.liveLinkEnabled && (!date.liveLinkUrl || date.liveLinkUrl.trim() === ''));
+        if (hasInvalidLiveLinks) {
+          alert('Si "Activer un lien live" est coché, l\'URL du live doit être renseignée');
+          return;
+        }
+
+        // Vérifier que linkGlobalTxt et linkGlobalHref sont mutuellement inclusifs
+        if ((formData.linkGlobalTxt && !formData.linkGlobalHref) || (!formData.linkGlobalTxt && formData.linkGlobalHref)) {
+          alert('Pour le lien global, le texte et l\'URL doivent être tous les deux renseignés (ou aucun)');
+          return;
+        }
+
+        const datesToSave = formData.dates.map(d => {
+           let scheduleStart = null;
+           let scheduleEnd = null;
+
+           if (d.date) {
+             const startDateObj = new Date(d.date);
+             if (!isNaN(startDateObj.getTime())) {
+               scheduleStart = Timestamp.fromDate(startDateObj);
+             }
+           }
+
+           if (d.endDate) {
+             const endDateObj = new Date(d.endDate);
+             if (!isNaN(endDateObj.getTime())) {
+               scheduleEnd = Timestamp.fromDate(endDateObj);
+             }
+           }
+           
+           return {
+             text: d.text,
+             scheduleStart: scheduleStart,
+             scheduleEnd: scheduleEnd,
+             showBadge: d.showBadge || false,
+             liveLinkExists: d.liveLinkEnabled || false,
+             liveLinkUrl: d.liveLinkEnabled ? d.liveLinkUrl : ''
+           };
+        });
 
         saveData = {
           type: 'calendar',
           calName: formData.calName,
-          dates: formData.dates,
+          calWording: formData.calWording || '', // Keeping as optional per implementation plan notes
+          nbElemsToShow: formData.nbElements || 3,
+          dates: datesToSave,
           linkGlobalTxt: formData.linkGlobalTxt || '',
           linkGlobalHref: formData.linkGlobalHref || '',
           linkGlobalNewTab: formData.linkGlobalNewTab || false,
           timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
-          timeUpdated: serverTimestamp()
+          timeUpdated: serverTimestamp(),
+          counterSeeAllClicks: formMode === 'create' ? 0 : (currentEmbed?.counterSeeAllClicks || 0),
+          counterViews: formMode === 'create' ? 0 : (currentEmbed?.counterViews || 0),
         };
         
         // L'auteur et le champ deleted ne sont définis que lors de la création

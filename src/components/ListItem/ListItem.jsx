@@ -277,6 +277,8 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
                   ? Object.values(embed.statsGlobal.scoreDistribution).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
                   : 0
               )
+          : embed.type === 'potm'
+            ? (embed.totalVotes || 0)
             : <span className="text-gray-400">n/a</span>}
       </div>
 
@@ -305,6 +307,8 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
               performance = embed.statsGlobal && embed.statsGlobal.scoreDistribution && typeof embed.statsGlobal.scoreDistribution === 'object'
                 ? Object.values(embed.statsGlobal.scoreDistribution).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
                 : 0;
+            } else if (embed.type === 'potm') {
+              performance = embed.totalVotes || 0;
             } else {
               return <span className="text-gray-400">n/a</span>;
             }
