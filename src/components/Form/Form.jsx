@@ -8,6 +8,7 @@ import TinderForm from './TinderForm';
 import QuizForm from './QuizForm';
 import TestimonyForm from './TestimonyForm';
 import PotmForm from './PotmForm';
+import PronoForm from './PronoForm';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, runTransaction, Timestamp } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { getAuth } from 'firebase/auth';
@@ -27,6 +28,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
       if (formType === 'quiz') return 'Nouveau quiz';
       if (formType === 'testimony') return 'Nouvel appel à témoignage';
       if (formType === 'potm') return 'Nouveau·elle joueur·euse du match';
+      if (formType === 'prono') return 'Nouveau pronostic';
     } else if (formMode === 'edit') {
       if (formType === 'poll') return 'Éditer le sondage';
       if (formType === 'calendar') return 'Éditer le calendrier';
@@ -36,6 +38,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
       if (formType === 'quiz') return 'Éditer le quiz';
       if (formType === 'testimony') return 'Éditer l\'appel à témoignage';
       if (formType === 'potm') return 'Éditer le/la joueur·euse du match';
+      if (formType === 'prono') return 'Éditer le pronostic';
     }
     return 'Formulaire';
   };
@@ -500,7 +503,10 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             name: player.name.trim(),
             position: player.position,
             team: player.team,
-            votes: player.votes || 0
+            code: player.code || '',
+            color: player.color || '#000000',
+            type: player.type || 'national',
+            votes: player.votes || 0,
           };
         });
 
@@ -524,6 +530,64 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         }
         // Toujours mettre à jour timeUpdated
         saveData.timeUpdated = serverTimestamp();
+      } else if (formData.type === 'prono') {
+        // Validation spécifique aux pronostics
+        if (!formData.pronoData || !formData.pronoData.item1 || !formData.pronoData.item1.name || !formData.pronoData.item2 || !formData.pronoData.item2.name) {
+          alert("Les noms des deux équipes/joueurs sont obligatoires");
+          return;
+        }
+        if (!formData.pronoData.event || !formData.pronoData.date) {
+            alert("Le contexte et la date sont obligatoires");
+            return;
+        }
+
+        // Conversion Date -> Timestamp
+        let pronoDateTimestamp = null;
+        if (formData.pronoData.date) {
+            try {
+                // Si c'est déjà un objet Date (venant de PronoForm)
+                if (formData.pronoData.date instanceof Date) {
+                    pronoDateTimestamp = Timestamp.fromDate(formData.pronoData.date);
+                } 
+                // Si c'est une string (devrait pas arriver avec le new PronoForm mais sécurité)
+                else if (typeof formData.pronoData.date === 'string') {
+                    const d = new Date(formData.pronoData.date);
+                    if (!isNaN(d.getTime())) {
+                        pronoDateTimestamp = Timestamp.fromDate(d);
+                    }
+                }
+            } catch (e) {
+                console.warn("Erreur date prono", e);
+            }
+        }
+
+        saveData = {
+          type: 'prono',
+          pronoData: {
+              ...formData.pronoData,
+              date: pronoDateTimestamp,
+              // Initialisation des votes à 1 lors de la création
+              item1: {
+                  ...formData.pronoData.item1,
+                  votes: formMode === 'create' ? 1 : (formData.pronoData.item1.votes || 0)
+              },
+              item2: {
+                  ...formData.pronoData.item2,
+                  votes: formMode === 'create' ? 1 : (formData.pronoData.item2.votes || 0)
+              },
+              item3: { // Draw
+                  votes: formMode === 'create' ? 1 : (formData.pronoData.item3?.votes || 0)
+              }
+          },
+          counterViews: formMode === 'create' ? 0 : (currentEmbed?.counterViews || 0)
+        };
+
+        if (formMode === 'create') {
+          saveData.author = currentUser.email;
+          saveData.deleted = false;
+          saveData.timeCreated = serverTimestamp();
+        }
+        saveData.timeUpdated = serverTimestamp();
       }
 
       // Sauvegarde selon le mode
@@ -541,6 +605,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         else if (formData.type === 'quiz') successMessage = 'Quiz créé avec succès !';
         else if (formData.type === 'testimony') successMessage = 'Appel à témoignage créé avec succès !';
         else if (formData.type === 'potm') successMessage = 'Joueur·euse du match créé·e avec succès !';
+        else if (formData.type === 'prono') successMessage = 'Pronostic créé avec succès !';
         
         alert(successMessage);
         
@@ -650,6 +715,45 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             transaction.update(docRef, updatedSaveData);
           });
           console.log('POTM mis à jour avec transaction:', currentEmbed.id);
+        } else if (formData.type === 'prono') {
+          await runTransaction(db, async (transaction) => {
+            const currentDoc = await transaction.get(docRef);
+            if (!currentDoc.exists()) {
+              throw new Error("Le document n'existe pas");
+            }
+            const currentData = currentDoc.data();
+            
+            // Fusionner les données pour préserver les votes
+            // IMPORTANT: Lors d'une mise à jour transactionnelle, on fusionne ce qui vient du formulaire (noms, couleurs, event, date)
+            // avec les votes qui sont dans la base de données.
+            
+            // Note: saveData contient déjà item1/2/3 votes venant du formulaire, 
+            // mais on préfère la source de vérité de la DB pour éviter les conflits de concurrence sur les votes.
+            
+            const updatedPronoData = {
+              ...saveData.pronoData,
+              item1: {
+                ...saveData.pronoData.item1,
+                votes: currentData.pronoData?.item1?.votes || 1 // Fallback à 1 si jamais undefined
+              },
+              item2: {
+                ...saveData.pronoData.item2,
+                votes: currentData.pronoData?.item2?.votes || 1
+              },
+              item3: {
+                votes: currentData.pronoData?.item3?.votes || 1
+              }
+            };
+            
+            const updatedSaveData = {
+              ...saveData,
+              pronoData: updatedPronoData,
+              counterViews: currentData.counterViews || 0
+            };
+            
+            transaction.update(docRef, updatedSaveData);
+          });
+          console.log('Pronostic mis à jour avec transaction:', currentEmbed.id);
         } else {
           // Pour les autres types, mise à jour classique
           await updateDoc(docRef, saveData);
@@ -665,6 +769,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         else if (formData.type === 'quiz') successMessage = 'Quiz modifié avec succès !';
         else if (formData.type === 'testimony') successMessage = 'Appel à témoignage modifié avec succès !';
         else if (formData.type === 'potm') successMessage = 'Joueur·euse du match modifié·e avec succès !';
+        else if (formData.type === 'prono') successMessage = 'Pronostic modifié avec succès !';
         
         alert(successMessage);
         
@@ -768,6 +873,14 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {formType === 'potm' && (
           <PotmForm
+            currentEmbed={currentEmbed}
+            formMode={formMode}
+            onChange={handleFormDataChange}
+          />
+        )}
+
+        {formType === 'prono' && (
+          <PronoForm
             currentEmbed={currentEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}

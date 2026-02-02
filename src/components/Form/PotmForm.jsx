@@ -39,10 +39,21 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
       // Récupérer les joueurs existants
       if (Array.isArray(currentEmbed.players) && currentEmbed.players.length > 0) {
         // Ajouter un ID aux joueurs qui n'en ont pas (anciens documents)
-        const playersWithIds = currentEmbed.players.map((player, index) => ({
-          ...player,
-          id: player.id || `legacy-${currentEmbed.id}-${index}`
-        }));
+        // ET enrichir avec code/color si manquant
+        const playersWithIds = currentEmbed.players.map((player, index) => {
+             // Find team data (robust search)
+             const teamData = teamsData.find(t => 
+                 t.name === player.team || 
+                 (player.team && t.name.normalize('NFC').trim() === player.team.normalize('NFC').trim())
+             );
+             return {
+              ...player,
+              id: player.id || `legacy-${currentEmbed.id}-${index}`,
+              code: teamData ? teamData.code : (player.code || ''),
+              color: teamData ? teamData.color : (player.color || '#000000'),
+              type: teamData ? teamData.type : (player.type || 'national')
+             };
+        });
         setPlayers(playersWithIds);
       }
     }
@@ -50,6 +61,23 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
 
   // Notification des changements au parent
   useEffect(() => {
+    // Enrichir les joueurs avec les données de l'équipe (code, color)
+    const enrichedPlayers = players.map(player => {
+        const teamData = teamsData.find(t => 
+            t.name === player.team || 
+            (player.team && t.name.normalize('NFC').trim() === player.team.normalize('NFC').trim())
+        );
+        return {
+            ...player,
+            code: teamData ? teamData.code : '',
+            color: teamData ? teamData.color : '#000000',
+            type: teamData ? teamData.type : 'national'
+            // On s'assure que la position est bien conservée/mise à jour
+        };
+    });
+
+    console.log('Sending players to parent:', enrichedPlayers); // Debug log
+
     onChange({
       context: {
         sport,
@@ -57,7 +85,7 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
         text: matchText,
         date: matchDate
       },
-      players, // Les positions sont déjà adaptées selon la catégorie
+      players: enrichedPlayers,
       type: 'potm'
     });
   }, [sport, category, matchText, matchDate, players, onChange]);
@@ -234,8 +262,10 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
                   onChange={(e) => handlePlayerChange(index, 'team', e.target.value)}
                   className="field mb-0 w-32 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {teamsData.teams.map((team) => (
-                    <option key={team} value={team}>{team}</option>
+                  {teamsData
+                    .filter(team => team.type === 'national')
+                    .map((team) => (
+                      <option key={team.name} value={team.name}>{team.name}</option>
                   ))}
                 </select>
               {/* Boutons de réordonnancement */}
