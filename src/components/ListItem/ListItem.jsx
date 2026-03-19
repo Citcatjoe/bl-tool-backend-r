@@ -153,7 +153,8 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
     if (embed.type === 'calendar') {
       url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-calendar/?calendarDoc=${embed.id}`;
     } else if (embed.type === 'poll') {
-      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-poll/?pollDoc=${embed.id}`;
+      const brandParam = embed.brand || 'blick';
+      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-poll/?pollDoc=${embed.id}&brand=${brandParam}`;
     } else if (embed.type === 'teaser') {
       url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-teaser/?teaserDoc=${embed.id}`;
     } else if (embed.type === 'folder') {

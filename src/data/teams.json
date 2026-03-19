@@ -310,5 +310,103 @@
     "code": "uy",
     "color": "#0081C8",
     "type": "national"
+  },
+  {
+    "name": "Ajoie",
+    "code": "hca",
+    "color": "#FFCC00",
+    "type": "national_league",
+    "img": "ch_ajoie.png"
+  },
+  {
+    "name": "Ambri-Piotta",
+    "code": "amb",
+    "color": "#003366",
+    "type": "national_league",
+    "img": "ch_ambri.png"
+  },
+  {
+    "name": "Berne",
+    "code": "scb",
+    "color": "#E1001A",
+    "type": "national_league",
+    "img": "ch_berne.png"
+  },
+  {
+    "name": "Bienne",
+    "code": "ehcb",
+    "color": "#D11117",
+    "type": "national_league",
+    "img": "ch_bienne.png"
+  },
+  {
+    "name": "Davos",
+    "code": "hcd",
+    "color": "#FFED00",
+    "type": "national_league",
+    "img": "ch_davos.png"
+  },
+  {
+    "name": "Fribourg-Gottéron",
+    "code": "fri",
+    "color": "#000000",
+    "type": "national_league",
+    "img": "ch_fribourg.png"
+  },
+  {
+    "name": "Genève-Servette",
+    "code": "gen",
+    "color": "#581018",
+    "type": "national_league",
+    "img": "ch_geneve.png"
+  },
+  {
+    "name": "Kloten",
+    "code": "klo",
+    "color": "#005DAA",
+    "type": "national_league",
+    "img": "ch_kloten.png"
+  },
+  {
+    "name": "Langnau (SCL Tigers)",
+    "code": "scl",
+    "color": "#E30613",
+    "type": "national_league",
+    "img": "ch_langnau.png"
+  },
+  {
+    "name": "Lausanne",
+    "code": "lhc",
+    "color": "#E4002B",
+    "type": "national_league",
+    "img": "ch_lausanne.png"
+  },
+  {
+    "name": "Lugano",
+    "code": "hcl",
+    "color": "#000000",
+    "type": "national_league",
+    "img": "ch_lugano.png"
+  },
+  {
+    "name": "Rapperswil",
+    "code": "rap",
+    "color": "#C00505",
+    "type": "national_league",
+    "img": "ch_rapperswil.png"
+  },
+  {
+    "name": "Zoug",
+    "code": "evz",
+    "color": "#0061A0",
+    "type": "national_league",
+    "img": "ch_zoug.png"
+  },
+  {
+    "name": "Zürich (ZSC Lions)",
+    "code": "zsc",
+    "color": "#0068B5",
+    "type": "national_league",
+    "img": "ch_zuerich.png"
   }
 ]

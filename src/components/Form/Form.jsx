@@ -103,6 +103,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           pollTxt: formData.pollTxt,
           answerTxts: filteredTxts,
           answerCounters: filteredCounters,
+          brand: formData.brand || 'blick',
           timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
           timeUpdated: serverTimestamp()
         };
@@ -453,8 +454,8 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         saveData.timeUpdated = serverTimestamp();
       } else if (formData.type === 'potm') {
         // Validation spécifique au joueur du match
-        if (!formData.context || !formData.context.sport || !formData.context.category) {
-          alert('Le sport et la catégorie doivent être renseignés');
+        if (!formData.context || !formData.context.context || !formData.context.category) {
+          alert('Le contexte et la catégorie doivent être renseignés');
           return;
         }
 
@@ -506,6 +507,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             code: player.code || '',
             color: player.color || '#000000',
             type: player.type || 'national',
+            img: player.img ?? null,
             votes: player.votes || 0,
           };
         });
@@ -513,7 +515,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         saveData = {
           type: 'potm',
           context: {
-            sport: formData.context.sport,
+            context: formData.context.context,
             category: formData.context.category,
             text: formData.context.text.trim(),
             date: matchDateTimestamp
@@ -754,6 +756,32 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             transaction.update(docRef, updatedSaveData);
           });
           console.log('Pronostic mis à jour avec transaction:', currentEmbed.id);
+        } else if (formData.type === 'poll') {
+          await runTransaction(db, async (transaction) => {
+            const currentDoc = await transaction.get(docRef);
+            if (!currentDoc.exists()) {
+              throw new Error('Le document n\'existe pas');
+            }
+            
+            const currentData = currentDoc.data();
+            const currentTxts = currentData.answerTxts || [];
+            const currentCounters = currentData.answerCounters || [];
+            
+            // Fusionner les compteurs : si le texte est identique à un existant, on garde le compteur
+            // Sinon (nouveau texte ou texte modifié), on repart à 0
+            const mergedCounters = saveData.answerTxts.map((newTxt) => {
+              const existingIndex = currentTxts.indexOf(newTxt);
+              return existingIndex !== -1 ? (currentCounters[existingIndex] || 0) : 0;
+            });
+            
+            const updatedSaveData = {
+              ...saveData,
+              answerCounters: mergedCounters
+            };
+            
+            transaction.update(docRef, updatedSaveData);
+          });
+          console.log('Sondage mis à jour avec transaction:', currentEmbed.id);
         } else {
           // Pour les autres types, mise à jour classique
           await updateDoc(docRef, saveData);

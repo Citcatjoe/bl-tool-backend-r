@@ -5,6 +5,7 @@ function PollForm({ currentEmbed, formMode, onChange }) {
   const [pollTxt, setPollTxt] = useState('');
   const [answerTxts, setAnswerTxts] = useState(['', '']);
   const [answerCounters, setAnswerCounters] = useState([0, 0]);
+  const [brand, setBrand] = useState('blick');
 
   // Initialisation des données en mode édition
   useEffect(() => {
@@ -12,6 +13,7 @@ function PollForm({ currentEmbed, formMode, onChange }) {
       setPollTxt(currentEmbed.pollTxt || '');
       setAnswerTxts(Array.isArray(currentEmbed.answerTxts) ? currentEmbed.answerTxts : ['', '']);
       setAnswerCounters(Array.isArray(currentEmbed.answerCounters) ? currentEmbed.answerCounters : [0, 0]);
+      setBrand(currentEmbed.brand || 'blick');
     }
   }, [formMode, currentEmbed]);
 
@@ -21,9 +23,10 @@ function PollForm({ currentEmbed, formMode, onChange }) {
       pollTxt,
       answerTxts,
       answerCounters,
+      brand,
       type: 'poll'
     });
-  }, [pollTxt, answerTxts, answerCounters]);
+  }, [pollTxt, answerTxts, answerCounters, brand]);
 
   const handleAnswerChange = (index, value) => {
   const newTxts = [...answerTxts];
@@ -47,6 +50,37 @@ function PollForm({ currentEmbed, formMode, onChange }) {
 
   return (
     <div className="space-y-4">
+      {/* Brand choice */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Brand
+        </label>
+        <div className="flex gap-4 items-center">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="brand"
+              value="blick"
+              checked={brand === 'blick'}
+              onChange={() => setBrand('blick')}
+              className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">Blick</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="brand"
+              value="pme"
+              checked={brand === 'pme'}
+              onChange={() => setBrand('pme')}
+              className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">Pme</span>
+          </label>
+        </div>
+      </div>
+
       {/* Question du sondage */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">

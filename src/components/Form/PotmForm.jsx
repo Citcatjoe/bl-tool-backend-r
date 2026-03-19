@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import teamsData from '../../data/teams.json';
+import contextsData from '../../data/contexts.json';
 
 function PotmForm({ currentEmbed, formMode, onChange }) {
   // States pour les champs du POTM
-  const [sport, setSport] = useState('Football');
+  const [context, setContext] = useState('national');
   const [category, setCategory] = useState('Messieurs');
   const [matchText, setMatchText] = useState('');
   const [matchDate, setMatchDate] = useState('');
@@ -15,7 +16,7 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
   // Initialisation des données en mode édition
   useEffect(() => {
     if (formMode === 'edit' && currentEmbed) {
-      setSport(currentEmbed.context?.sport || 'Football');
+      setContext(currentEmbed.context?.context || currentEmbed.context?.sport || 'national');
       setCategory(currentEmbed.context?.category || 'Messieurs');
       setMatchText(currentEmbed.context?.text || '');
       
@@ -46,18 +47,37 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
                  t.name === player.team || 
                  (player.team && t.name.normalize('NFC').trim() === player.team.normalize('NFC').trim())
              );
-             return {
-              ...player,
-              id: player.id || `legacy-${currentEmbed.id}-${index}`,
-              code: teamData ? teamData.code : (player.code || ''),
-              color: teamData ? teamData.color : (player.color || '#000000'),
-              type: teamData ? teamData.type : (player.type || 'national')
-             };
-        });
-        setPlayers(playersWithIds);
-      }
-    }
-  }, [formMode, currentEmbed]);
+              return {
+               ...player,
+               id: player.id || `legacy-${currentEmbed.id}-${index}`,
+               team: teamData ? teamData.name : player.team,
+               code: teamData ? teamData.code : (player.code || ''),
+               color: teamData ? teamData.color : (player.color || '#000000'),
+               type: teamData ? teamData.type : (player.type || 'national')
+              };
+         });
+         setPlayers(playersWithIds);
+       }
+     }
+   }, [formMode, currentEmbed]);
+
+  const handleContextChange = (newContext) => {
+    setContext(newContext);
+    
+    // Mettre à jour les équipes des joueurs uniquement lors d'un changement manuel
+    const validTeams = teamsData.filter(t => t.type === newContext).map(t => t.name);
+    const defaultTeam = validTeams[0] || '';
+
+    setPlayers(prevPlayers => 
+      prevPlayers.map(player => {
+        const isTeamValid = validTeams.includes(player.team);
+        if (!isTeamValid) {
+          return { ...player, team: defaultTeam };
+        }
+        return player;
+      })
+    );
+  };
 
   // Notification des changements au parent
   useEffect(() => {
@@ -71,7 +91,8 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
             ...player,
             code: teamData ? teamData.code : '',
             color: teamData ? teamData.color : '#000000',
-            type: teamData ? teamData.type : 'national'
+            type: teamData ? teamData.type : 'national',
+            img: teamData && teamData.type === 'national_league' ? (teamData.img || null) : null
             // On s'assure que la position est bien conservée/mise à jour
         };
     });
@@ -80,7 +101,7 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
 
     onChange({
       context: {
-        sport,
+        context,
         category,
         text: matchText,
         date: matchDate
@@ -88,7 +109,7 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
       players: enrichedPlayers,
       type: 'potm'
     });
-  }, [sport, category, matchText, matchDate, players, onChange]);
+  }, [context, category, matchText, matchDate, players, onChange]);
 
   // Adapter les positions des joueurs quand la catégorie change
   useEffect(() => {
@@ -115,7 +136,8 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
 
   const addPlayer = () => {
     const defaultPosition = getPositionForCategory('Attaquant', category);
-    setPlayers([...players, { id: Date.now() + '-' + players.length, name: '', position: defaultPosition, team: 'Suisse', votes: 0 }]);
+    const defaultTeam = teamsData.find(t => t.type === context)?.name || '';
+    setPlayers([...players, { id: Date.now() + '-' + players.length, name: '', position: defaultPosition, team: defaultTeam, votes: 0 }]);
   };
 
   const removePlayer = (index) => {
@@ -160,20 +182,21 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
 
   return (
     <div className="space-y-4">
-      {/* Section 1: Sport et Catégorie */}
+      {/* Section 1: Contexte et Catégorie */}
       <div className="flex gap-4">
-        {/* Sport */}
+        {/* Contexte */}
         <div className="w-1/2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Sport *
+            Contexte *
           </label>
           <select
-            value={sport}
-            onChange={(e) => setSport(e.target.value)}
+            value={context}
+            onChange={(e) => handleContextChange(e.target.value)}
             className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="Football">Football</option>
-            <option value="Hockey">Hockey</option>
+            {contextsData.map((ctx) => (
+              <option key={ctx.type} value={ctx.type}>{ctx.label}</option>
+            ))}
           </select>
         </div>
 
@@ -263,7 +286,7 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
                   className="field mb-0 w-32 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {teamsData
-                    .filter(team => team.type === 'national')
+                    .filter(team => team.type === context)
                     .map((team) => (
                       <option key={team.name} value={team.name}>{team.name}</option>
                   ))}

@@ -25,6 +25,7 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
       text: '',
       hint: '',
       img: '',
+      hidePercent: false,
       answers: [
         { isCorrect: false, text: '' },
         { isCorrect: false, text: '' },
@@ -49,6 +50,7 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
               text: q.text || '',
               hint: q.hint || '',
               img: q.img || '',
+              hidePercent: !!q.hidePercent,
               answers: Array.isArray(q.answers)
                 ? q.answers.map(a => ({ isCorrect: !!a.isCorrect, text: a.text || '' }))
                 : [
@@ -63,6 +65,7 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
                 text: '',
                 hint: '',
                 img: '',
+                hidePercent: false,
                 answers: [
                   { isCorrect: false, text: '' },
                   { isCorrect: false, text: '' },
@@ -109,6 +112,7 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
         text: '',
         hint: '',
         img: '',
+        hidePercent: false,
         answers: [
           { isCorrect: false, text: '' },
           { isCorrect: false, text: '' },
@@ -178,99 +182,117 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
         <div className="space-y-4">
           {questions.map((q, idx) => (
             <div key={idx} className="border border-gray-300 rounded-md p-4 bg-gray-50">
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm font-medium text-gray-700">Question {idx + 1}</span>
-                  <div className="flex gap-2">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-medium text-gray-700">Question {idx + 1}</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => moveQuestion(idx, 'up')}
+                    disabled={idx === 0}
+                    className="btn-form"
+                    title="Déplacer vers le haut"
+                  >↑</button>
+                  <button
+                    type="button"
+                    onClick={() => moveQuestion(idx, 'down')}
+                    disabled={idx === questions.length - 1}
+                    className="btn-form"
+                    title="Déplacer vers le bas"
+                  >↓</button>
+                  {/* Bouton de suppression, masqué si une seule question */}
+                  {questions.length > 1 && (
                     <button
                       type="button"
-                      onClick={() => moveQuestion(idx, 'up')}
-                      disabled={idx === 0}
-                      className="btn-form"
-                      title="Déplacer vers le haut"
-                    >↑</button>
-                    <button
-                      type="button"
-                      onClick={() => moveQuestion(idx, 'down')}
-                      disabled={idx === questions.length - 1}
-                      className="btn-form"
-                      title="Déplacer vers le bas"
-                    >↓</button>
-                    {/* Bouton de suppression, masqué si une seule question */}
-                    {questions.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeQuestion(idx)}
-                        className="btn-form btn-delete"
-                        title="Supprimer la question"
-                      >×</button>
-                    )}
-                  </div>
+                      onClick={() => removeQuestion(idx)}
+                      className="btn-form btn-delete"
+                      title="Supprimer la question"
+                    >×</button>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-4 mb-3">
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mb-3">
+                <input
+                  type="text"
+                  placeholder="Texte de la question"
+                  value={q.text}
+                  onChange={e => {
+                    const newQuestions = [...questions];
+                    newQuestions[idx].text = e.target.value;
+                    setQuestions(newQuestions);
+                  }}
+                  className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Complément d'information"
+                  value={q.hint}
+                  onChange={e => {
+                    const newQuestions = [...questions];
+                    newQuestions[idx].hint = e.target.value;
+                    setQuestions(newQuestions);
+                  }}
+                  className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Image de la question */}
+              <div className="mb-3">
+                <ImageUploader
+                  type='quiz'
+                  initialUrl={q.img}
+                  oldUrl={q.img}
+                  label={`Image de la question ${idx + 1}`}
+                  disabled={false}
+                  onUpload={url => {
+                    const newQuestions = [...questions];
+                    newQuestions[idx].img = url;
+                    setQuestions(newQuestions);
+                  }}
+                />
+              </div>
+
+              <div className="mb-3">
+                <span className="block text-sm font-medium text-gray-700 mb-3">Réponses</span>
+                <div className="space-y-2">
+                  {q.answers.map((a, aIdx) => (
+                    <div key={aIdx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder={`Réponse ${aIdx + 1}`}
+                        value={a.text}
+                        onChange={e => updateAnswer(idx, aIdx, 'text', e.target.value)}
+                        required
+                      />
+                      <input
+                        type="radio"
+                        name={`correct-answer-${idx}`}
+                        checked={a.isCorrect}
+                        onChange={() => setCorrectAnswer(idx, aIdx)}
+                        className="form-radio h-4 w-8 text-blue-600"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Checkbox hidePercent */}
+              <div className="mt-4 mb-3">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
-                    type="text"
-                    placeholder="Texte de la question"
-                    value={q.text}
+                    type="checkbox"
+                    checked={q.hidePercent || false}
                     onChange={e => {
                       const newQuestions = [...questions];
-                      newQuestions[idx].text = e.target.value;
+                      newQuestions[idx].hidePercent = e.target.checked;
                       setQuestions(newQuestions);
                     }}
-                    className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
+                    className="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                   />
-                  <input
-                    type="text"
-                    placeholder="Complément d'information"
-                    value={q.hint}
-                    onChange={e => {
-                      const newQuestions = [...questions];
-                      newQuestions[idx].hint = e.target.value;
-                      setQuestions(newQuestions);
-                    }}
-                    className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                {/* Image de la question */}
-                <div className="mb-3">
-                  <ImageUploader
-                    type='quiz'
-                    initialUrl={q.img}
-                    oldUrl={q.img}
-                    label={`Image de la question ${idx + 1}`}
-                    disabled={false}
-                    onUpload={url => {
-                      const newQuestions = [...questions];
-                      newQuestions[idx].img = url;
-                      setQuestions(newQuestions);
-                    }}
-                  />
-                </div>
-                <div className="">
-                  <span className="block text-sm font-medium text-gray-700 mb-3">Réponses</span>
-                  <div className="space-y-2">
-                    {q.answers.map((a, aIdx) => (
-                      <div key={aIdx} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder={`Réponse ${aIdx + 1}`}
-                          value={a.text}
-                          onChange={e => updateAnswer(idx, aIdx, 'text', e.target.value)}
-                          required
-                        />
-                        <input
-                          type="radio"
-                          name={`correct-answer-${idx}`}
-                          checked={a.isCorrect}
-                          onChange={() => setCorrectAnswer(idx, aIdx)}
-                          className="form-radio h-4 w-8 text-blue-600"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                  <span className="text-sm font-medium text-gray-700">Masquer les pourcentages lors de la réponse</span>
+                </label>
               </div>
             </div>
           ))}
