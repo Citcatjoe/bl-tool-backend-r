@@ -347,7 +347,7 @@
     "img": "ch_davos.png"
   },
   {
-    "name": "Fribourg-Gottéron",
+    "name": "Fribourg Gottéron",
     "code": "fri",
     "color": "#000000",
     "type": "national_league",
@@ -368,7 +368,7 @@
     "img": "ch_kloten.png"
   },
   {
-    "name": "Langnau (SCL Tigers)",
+    "name": "Langnau",
     "code": "scl",
     "color": "#E30613",
     "type": "national_league",
@@ -403,7 +403,7 @@
     "img": "ch_zoug.png"
   },
   {
-    "name": "Zürich (ZSC Lions)",
+    "name": "Zurich",
     "code": "zsc",
     "color": "#0068B5",
     "type": "national_league",

@@ -3,7 +3,7 @@ import { doc, updateDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../../services/firebase'; // Assurez-vous que le chemin d'importation de db est correct
 import { useState, useRef, useEffect } from 'react';
 
-function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconTinder, iconQuiz, iconTestimony, iconJersey, iconProno, iconDotsVertical, iconEye, iconCopy, iconEdit, iconTrash, iconDownload, onEdit, onDataChange, user, devMode }) {
+function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconTinder, iconQuiz, iconTestimony, iconJersey, iconProno, iconStar, iconDotsVertical, iconEye, iconCopy, iconEdit, iconTrash, iconDownload, onEdit, onDataChange, user, devMode }) {
   // Handler pour la modification de la structure d'un poll
   // const handleModifyPollData = async () => {
   //   if (embed.type !== 'poll') return;
@@ -169,6 +169,8 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
       url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-potm/?potmDoc=${embed.id}`; 
     } else if (embed.type === 'prono') {
       url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-prono/?pronoDoc=${embed.id}`;
+    } else if (embed.type === 'facts') {
+      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-facts/?factsDoc=${embed.id}`;
     } else {
       url = embed.id; // fallback
     }
@@ -242,11 +244,13 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
                     ? (embed.title || 'Quiz')
                     : embed.type === 'testimony'
                       ? (embed.title || 'Témoignage')
-                      : embed.type === 'potm'
-                        ? ('Joueur·euse du match' + (embed.context?.text ? (' (' + embed.context.text + ')') : ''))
-                        : embed.type === 'prono'
-                          ? ("Pronostic Express : " + (embed.pronoData?.item1?.name || "?") + " - " + (embed.pronoData?.item2?.name || "?"))
-                          : 'Titre'} 
+                        : embed.type === 'potm'
+                          ? ('Joueur·euse du match' + (embed.context?.text ? (' (' + embed.context.text + ')') : ''))
+                          : embed.type === 'prono'
+                            ? ("Pronostic Express : " + (embed.pronoData?.item1?.name || "?") + " - " + (embed.pronoData?.item2?.name || "?"))
+                            : embed.type === 'facts'
+                              ? ("Faits marquants de " + (embed.factsData?.rencontre || embed.factsTitle || '') + (embed.factsData?.date ? " (" + (typeof embed.factsData.date === 'string' ? embed.factsData.date.substring(0, 10).split('-').reverse().join('.') : typeof embed.factsData.date?.toDate === 'function' ? embed.factsData.date.toDate().toLocaleDateString('fr-CH') : "") + ")" : ""))
+                              : 'Titre'} 
       </div>
       <div className="icon-container text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
         {/* Affichage de l'icône en fonction du type d'embed */}
@@ -259,6 +263,7 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
         {embed.type === 'testimony' && <img src={iconTestimony} alt="testimony" />}
         {embed.type === 'potm' && <img src={iconJersey} alt="potm" />}
         {embed.type === 'prono' && <img src={iconProno} alt="prono" />}
+        {embed.type === 'facts' && <img src={iconStar} alt="facts" />}
       </div>
       <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-3/12">
         {/* Affichage de l'auteur */}
@@ -289,7 +294,11 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
               ? ((embed.pronoData && embed.pronoData.item1 && embed.pronoData.item2) 
                   ? ((parseInt(embed.pronoData.item1.votes) || 0) + (parseInt(embed.pronoData.item2.votes) || 0) + (parseInt(embed.pronoData.item3?.votes) || 0))
                   : 0)
-              : <span className="text-gray-400">n/a</span>}
+              : embed.type === 'facts'
+                ? (embed.factsData?.items && typeof embed.factsData.items === 'object'
+                    ? Object.values(embed.factsData.items).reduce((sum, item) => sum + (parseInt(item?.votes) || 0), 0)
+                    : 0)
+                : <span className="text-gray-400">n/a</span>}
       </div>
 
       {devMode && (
@@ -323,6 +332,10 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
                 performance = (embed.pronoData && embed.pronoData.item1 && embed.pronoData.item2) 
                 ? ((parseInt(embed.pronoData.item1.votes) || 0) + (parseInt(embed.pronoData.item2.votes) || 0) + (parseInt(embed.pronoData.draw?.votes) || 0))
                 : 0;
+            } else if (embed.type === 'facts') {
+                performance = (embed.factsData?.items && typeof embed.factsData.items === 'object')
+                    ? Object.values(embed.factsData.items).reduce((sum, item) => sum + (parseInt(item?.votes) || 0), 0)
+                    : 0;
             } else {
               return <span className="text-gray-400">n/a</span>;
             }

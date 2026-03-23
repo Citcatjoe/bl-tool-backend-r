@@ -9,6 +9,7 @@ import QuizForm from './QuizForm';
 import TestimonyForm from './TestimonyForm';
 import PotmForm from './PotmForm';
 import PronoForm from './PronoForm';
+import FactsForm from './FactsForm';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, runTransaction, Timestamp } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { getAuth } from 'firebase/auth';
@@ -29,6 +30,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
       if (formType === 'testimony') return 'Nouvel appel à témoignage';
       if (formType === 'potm') return 'Nouveau·elle joueur·euse du match';
       if (formType === 'prono') return 'Nouveau pronostic';
+      if (formType === 'facts') return 'Nouveaux faits marquants';
     } else if (formMode === 'edit') {
       if (formType === 'poll') return 'Éditer le sondage';
       if (formType === 'calendar') return 'Éditer le calendrier';
@@ -39,6 +41,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
       if (formType === 'testimony') return 'Éditer l\'appel à témoignage';
       if (formType === 'potm') return 'Éditer le/la joueur·euse du match';
       if (formType === 'prono') return 'Éditer le pronostic';
+      if (formType === 'facts') return 'Éditer les faits marquants';
     }
     return 'Formulaire';
   };
@@ -590,6 +593,123 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           saveData.timeCreated = serverTimestamp();
         }
         saveData.timeUpdated = serverTimestamp();
+      } else if (formData.type === 'facts') {
+        if (!formData.factsData || !formData.factsData.rencontre || formData.factsData.rencontre.trim() === '') {
+          alert('La rencontre doit être renseignée');
+          return;
+        }
+        if (!formData.factsData.date || formData.factsData.date.trim() === '') {
+          alert('La date doit être renseignée');
+          return;
+        }
+
+        let factsDateTimestamp = null;
+        try {
+          // Ajouter l'heure à midi pour avoir un timestamp complet
+          const dateObj = new Date(formData.factsData.date + 'T12:00:00');
+          if (!isNaN(dateObj.getTime())) {
+            factsDateTimestamp = Timestamp.fromDate(dateObj);
+          }
+        } catch (error) {
+          console.warn('Erreur lors de la conversion de la date:', error);
+          alert('Format de date invalide');
+          return;
+        }
+
+        // Validation stricte des attributs requis par type d'item
+        for (let i = 0; i < formData.factsData.items.length; i++) {
+          const item = formData.factsData.items[i];
+
+          if (!item.title || item.title.trim() === '') {
+             alert(`Le fait marquant #${i + 1} doit obligatoirement comporter un "Titre".`);
+             return;
+          }
+
+          if (item.type === 'normal') {
+             if (!item.text || item.text.trim() === '') {
+                alert(`Le fait marquant #${i + 1} (Normal) doit obligatoirement comporter un "Contenu".`);
+                return;
+             }
+          }
+
+          if (item.type === 'quote') {
+             if (!item.text || item.text.trim() === '') {
+                alert(`Le fait marquant #${i + 1} (Citation) doit obligatoirement comporter une "Citation".`);
+                return;
+             }
+             if (!item.author || item.author.trim() === '') {
+                alert(`Le fait marquant #${i + 1} (Citation) doit obligatoirement comporter un "Auteur de la citation".`);
+                return;
+             }
+          }
+
+          if (item.type === 'picture') {
+             if (!item.src || item.src.trim() === '') {
+                alert(`Le fait marquant #${i + 1} (Image) doit obligatoirement comporter une image validée.`);
+                return;
+             }
+             if (!item.text || item.text.trim() === '') {
+                alert(`Le fait marquant #${i + 1} (Image) doit obligatoirement comporter un "Contenu".`);
+                return;
+             }
+             if (!item.caption || item.caption.trim() === '') {
+                alert(`Le fait marquant #${i + 1} (Image) doit obligatoirement comporter un Crédit.`);
+                return;
+             }
+          }
+
+          if (item.type === 'number') {
+             if (item.value === undefined || item.value === null || item.value === '') {
+                alert(`Le fait marquant #${i + 1} (Chiffre) doit obligatoirement comporter un "Chiffre".`);
+                return;
+             }
+             if (!item.text || item.text.trim() === '') {
+                alert(`Le fait marquant #${i + 1} (Chiffre) doit obligatoirement comporter une "Description".`);
+                return;
+             }
+          }
+        }
+
+        const itemsToSave = formData.factsData.items.map(item => {
+          const baseItem = {
+            id: item.id || (Date.now() + Math.random().toString(36).substr(2, 9)),
+            icon: item.icon || '',
+            title: item.title || '',
+            type: item.type || 'normal',
+            text: item.text || '',
+            votes: item.votes || 0,
+          };
+          if (item.type === 'quote') {
+             baseItem.author = item.author || '';
+             if (item.picture) baseItem.picture = item.picture;
+          }
+          if (item.type === 'picture') {
+             baseItem.caption = item.caption || '';
+             if (item.src) baseItem.src = item.src;
+          }
+          if (item.type === 'number') baseItem.value = item.value || 0;
+          return baseItem;
+        });
+
+        saveData = {
+          type: 'facts',
+          counterViews: formMode === 'create' ? 0 : (currentEmbed?.counterViews || 0)
+        };
+
+        const factsDataObj = {
+          rencontre: formData.factsData.rencontre,
+          date: factsDateTimestamp,
+          items: itemsToSave
+        };
+
+        saveData.factsData = factsDataObj;
+
+        if (formMode === 'create') {
+          saveData.author = currentUser.email;
+          saveData.deleted = false;
+          saveData.timeCreated = serverTimestamp();
+        }
+        saveData.timeUpdated = serverTimestamp();
       }
 
       // Sauvegarde selon le mode
@@ -608,6 +728,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         else if (formData.type === 'testimony') successMessage = 'Appel à témoignage créé avec succès !';
         else if (formData.type === 'potm') successMessage = 'Joueur·euse du match créé·e avec succès !';
         else if (formData.type === 'prono') successMessage = 'Pronostic créé avec succès !';
+        else if (formData.type === 'facts') successMessage = 'Faits marquants créés avec succès !';
         
         alert(successMessage);
         
@@ -756,6 +877,70 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             transaction.update(docRef, updatedSaveData);
           });
           console.log('Pronostic mis à jour avec transaction:', currentEmbed.id);
+        } else if (formData.type === 'facts') {
+          await runTransaction(db, async (transaction) => {
+            const currentDoc = await transaction.get(docRef);
+            if (!currentDoc.exists()) {
+              throw new Error("Le document n'existe pas");
+            }
+            const currentData = currentDoc.data();
+            const currentFactsData = currentData.factsData || {};
+            
+            // Supports both old formats and new format for migrating matching
+            const oldList = currentFactsData.items || [];
+            let currentItems = [];
+            if (Array.isArray(oldList)) {
+                currentItems = oldList;
+            } else if (typeof oldList === 'object') {
+                const keys = Object.keys(oldList).filter(k => !isNaN(k) || k.startsWith('item')).sort();
+                currentItems = keys.map(k => oldList[k]);
+            } else {
+                // very old item1, item2 format
+                let i = 1;
+                while (currentFactsData[`item${i}`]) {
+                    currentItems.push(currentFactsData[`item${i}`]);
+                    i++;
+                }
+            }
+
+            const updatedItems = saveData.factsData.items.map((newItem, index) => {
+                 let currentVotes = 0;
+                 
+                 // 1. Chercher par l'ID unique explicit (pour les éléments récents)
+                 let matchedItem = currentItems.find(it => it && it.id === newItem.id);
+                 
+                 // 2. Fallback: Chercher par Titre (pour éviter la casse au reordering legacy)
+                 if (!matchedItem) {
+                     matchedItem = currentItems.find(it => it && it.title === newItem.title);
+                 }
+                 
+                 if (matchedItem && matchedItem.votes) {
+                      currentVotes = matchedItem.votes;
+                 } else if (currentItems[index] && currentItems[index].votes) {
+                      currentVotes = currentItems[index].votes;
+                 }
+                 
+                 return {
+                     ...newItem,
+                     votes: currentVotes
+                 };
+            });
+
+            // On reconstruit saveData.factsData en préservant les votes
+            const updatedFactsData = {
+              rencontre: saveData.factsData.rencontre,
+              date: saveData.factsData.date,
+              items: updatedItems
+            };
+
+            const updatedSaveData = {
+              ...saveData,
+              factsData: updatedFactsData,
+              counterViews: currentData.counterViews || 0
+            };
+            transaction.update(docRef, updatedSaveData);
+          });
+          console.log('Faits marquants mis à jour avec transaction:', currentEmbed.id);
         } else if (formData.type === 'poll') {
           await runTransaction(db, async (transaction) => {
             const currentDoc = await transaction.get(docRef);
@@ -798,6 +983,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         else if (formData.type === 'testimony') successMessage = 'Appel à témoignage modifié avec succès !';
         else if (formData.type === 'potm') successMessage = 'Joueur·euse du match modifié·e avec succès !';
         else if (formData.type === 'prono') successMessage = 'Pronostic modifié avec succès !';
+        else if (formData.type === 'facts') successMessage = 'Faits marquants modifiés avec succès !';
         
         alert(successMessage);
         
@@ -818,7 +1004,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
   };
 
   return (
-    <div id="form" className={s.form + (formVisible ? ' ' + s.isVisible : '') + ' max-w-3xl w-full h-auto overflow-y-auto fixed top-1/2 left-1/2 bg-white rounded-xl shadow-lg z-40'}>
+    <div id="form" className={s.form + (formVisible ? ' ' + s.isVisible : '') + ' max-w-4xl w-full h-auto overflow-y-auto fixed top-1/2 left-1/2 bg-white rounded-xl shadow-lg z-40'}>
       <div className="p-6">
         {/* En-tête avec titre et bouton fermer */}
         <div className="flex justify-between items-center mb-4">
@@ -909,6 +1095,14 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {formType === 'prono' && (
           <PronoForm
+            currentEmbed={currentEmbed}
+            formMode={formMode}
+            onChange={handleFormDataChange}
+          />
+        )}
+
+        {formType === 'facts' && (
+          <FactsForm
             currentEmbed={currentEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}

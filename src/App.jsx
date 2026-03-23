@@ -27,6 +27,7 @@ import iconJersey from './assets/img/icon-jersey.svg';
 import iconArrowTurn from './assets/img/icon-arrow-turn.svg';
 import iconDownload from './assets/img/icon-download.svg';
 import iconProno from './assets/img/icon-percent.svg';
+import iconStar from './assets/img/icon-star.svg';
 import PollListItem from './components/PollListItem/PollListItem';
 import CalendarListItem from './components/CalendarListItem/CalendarListItem';
 import ListItem from './components/ListItem/ListItem';
@@ -217,6 +218,14 @@ function App() {
         setMenuNewOpen(false);
     };
 
+    const handleNewFacts = () => {
+        setFormMode('create');
+        setFormType('facts');
+        setCurrentEmbed(null);
+        setFormVisible(true);
+        setMenuNewOpen(false);
+    };
+
     
 
     const handleEditEmbed = (embed) => {
@@ -266,6 +275,8 @@ function App() {
                     title = embed.potmTitle;
                 } else if (embed.type === 'prono') {
                     title = "Pronostic Express : " + (embed.pronoData?.item1?.name || "?") + " - " + (embed.pronoData?.item2?.name || "?");
+                } else if (embed.type === 'facts') {
+                    title = "Faits marquants de " + (embed.factsData?.rencontre || embed.factsTitle || "");
                 }
                 return title?.toLowerCase().includes(searchTerm.toLowerCase());
             }
@@ -348,6 +359,7 @@ function App() {
                         <option value="testimony">Témoignages</option>
                         <option value="potm">Joueurs/Joueuses du match</option>
                         <option value="prono">Pronostics</option>
+                        <option value="facts">Faits marquants</option>
                         {user?.email === 'cesargreppin@gmail.com' && (
                             <option value="deleted">Corbeille</option>
                         )}
@@ -423,6 +435,7 @@ function App() {
                                 iconTestimony={iconTestimony}
                                 iconJersey={iconJersey}
                                 iconProno={iconProno}
+                                iconStar={iconStar}
                                 iconDotsVertical={iconDotsVertical}
                                 iconEye={iconEye}
                                 iconCopy={iconCopy}
@@ -456,6 +469,7 @@ function App() {
                        <li id="btn-new-testimony" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewTestimony}>Nouvel appel à Tém.</li>
                        <li id="btn-new-potm" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewPotm}>Joueur·euse du match</li>
                        <li id="btn-new-prono" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewProno}>Pronostic</li>
+                       <li id="btn-new-facts" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewFacts}>Faits marquants</li>
                     </ul>
                 </div>
             {/* Dashboard ou widgets ici */}
