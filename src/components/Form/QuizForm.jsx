@@ -1,25 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import ImageUploader from '../ImageUploader';
+import RepeatableBlockActions from './RepeatableBlockActions';
 
 function QuizForm({ currentEmbed, formMode, onChange }) {
   // Champs conclusion
   const [conclusion, setConclusion] = useState({ text1: '', text2: '', text3: '' });
 
-  // Initialisation en mode édition pour la conclusion
-  useEffect(() => {
-    if (formMode === 'edit' && currentEmbed?.conclusion) {
-      setConclusion({
-        text1: currentEmbed.conclusion.text1 || '',
-        text2: currentEmbed.conclusion.text2 || '',
-        text3: currentEmbed.conclusion.text3 || '',
-      });
-    }
-  }, [formMode, currentEmbed]);
   // Titre du quiz
   const [title, setTitle] = useState('');
   // Image du quiz
   const [img, setImg] = useState('');
-  // Questions du quiz (ajout du champ img)
+  // Brand & theme
+  const [brand, setBrand] = useState('blick');
+  const [theme, setTheme] = useState(null);
+
+  // Questions du quiz
   const [questions, setQuestions] = useState([
     {
       text: '',
@@ -34,6 +29,7 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
       ],
     },
   ]);
+
   // Tableau statsQuestions synchronisé avec questions
   const [statsQuestions, setStatsQuestions] = useState([
     { correct: 0, incorrect: 0 },
@@ -44,6 +40,17 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
     if (formMode === 'edit' && currentEmbed) {
       setTitle(currentEmbed.title || '');
       setImg(currentEmbed.img || '');
+      setBrand(currentEmbed.brand || 'blick');
+      setTheme(currentEmbed.theme || null);
+
+      if (currentEmbed.conclusion) {
+        setConclusion({
+          text1: currentEmbed.conclusion.text1 || '',
+          text2: currentEmbed.conclusion.text2 || '',
+          text3: currentEmbed.conclusion.text3 || '',
+        });
+      }
+
       const loadedQuestions =
         currentEmbed.questions && Array.isArray(currentEmbed.questions)
           ? currentEmbed.questions.map(q => ({
@@ -75,6 +82,7 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
               },
             ];
       setQuestions(loadedQuestions);
+
       // statsQuestions doit être synchronisé en nombre et ordre
       const loadedStats = Array.isArray(currentEmbed.statsQuestions)
         ? currentEmbed.statsQuestions.map(sq => ({
@@ -82,6 +90,7 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
             incorrect: typeof sq.incorrect === 'number' ? sq.incorrect : 0,
           }))
         : [];
+
       // Si statsQuestions n'est pas de la bonne taille, on complète
       let stats = loadedStats;
       if (loadedQuestions.length > loadedStats.length) {
@@ -101,8 +110,8 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
 
   // Remonter la donnée au parent
   useEffect(() => {
-    onChange({ type: 'quiz', title, img, questions, statsQuestions, conclusion });
-  }, [title, img, questions, statsQuestions, conclusion, onChange]);
+    onChange({ type: 'quiz', title, img, questions, statsQuestions, conclusion, brand, theme });
+  }, [title, img, questions, statsQuestions, conclusion, brand, theme, onChange]);
 
   // Ajout d'une question
   const addQuestion = () => {
@@ -165,181 +174,277 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
   };
 
   return (
-    <form className="space-y-4">
+    <div className="space-y-6">
+      {/* Brand choice & Rubrique */}
+      <div className="flex gap-6 items-start">
+        {/* Brand */}
+        <div className="flex-none w-44">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Brand
+          </label>
+          <div className="flex gap-4 items-center h-12">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name="brand"
+                value="blick"
+                checked={brand === 'blick'}
+                onChange={() => setBrand('blick')}
+                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+              />
+              <span className="text-sm text-gray-700">Blick</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-not-allowed opacity-50 select-none" title="Le module de quiz n'est pas encore compatible avec la brand PME.">
+              <input
+                type="radio"
+                name="brand"
+                value="pme"
+                checked={brand === 'pme'}
+                onChange={() => setBrand('pme')}
+                disabled
+                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-not-allowed"
+              />
+              <span className="text-sm text-gray-400">Pme</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Rubrique */}
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Rubrique *
+          </label>
+          <select
+            value={theme || ''}
+            onChange={(e) => setTheme(e.target.value || null)}
+            className={`field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!theme ? 'text-gray-400' : 'text-gray-700'
+              }`}
+            required
+          >
+            <option value="" disabled hidden>Sélectionner...</option>
+            <option value="Suisse" className="text-gray-700">Suisse</option>
+            <option value="Inter" className="text-gray-700">Inter</option>
+            <option value="Sport" className="text-gray-700">Sport</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="py-4">
+        <hr className="border-gray-200" />
+      </div>
+
+      {/* Titre du quiz */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">Titre du quiz *</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Titre du quiz *
+        </label>
         <input
           type="text"
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           value={title}
           onChange={e => setTitle(e.target.value)}
-          placeholder="Titre du quiz"
+          placeholder="Connaissez-vous les chanteurs suisses les plus célèbres ?"
           required
         />
       </div>
+
+      {/* Image du quiz */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">Questions</label>
+        <ImageUploader
+          type="quiz"
+          initialUrl={img}
+          oldUrl={formMode === 'edit' ? img : ''}
+          label="Image de couverture du quiz"
+          disabled={false}
+          onUpload={setImg}
+        />
+      </div>
+
+      {/* Questions */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Questions *
+        </label>
         <div className="space-y-4">
           {questions.map((q, idx) => (
-            <div key={idx} className="border border-gray-300 rounded-md p-4 bg-gray-50">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-sm font-medium text-gray-700">Question {idx + 1}</span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => moveQuestion(idx, 'up')}
-                    disabled={idx === 0}
-                    className="btn-form"
-                    title="Déplacer vers le haut"
-                  >↑</button>
-                  <button
-                    type="button"
-                    onClick={() => moveQuestion(idx, 'down')}
-                    disabled={idx === questions.length - 1}
-                    className="btn-form"
-                    title="Déplacer vers le bas"
-                  >↓</button>
-                  {/* Bouton de suppression, masqué si une seule question */}
-                  {questions.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeQuestion(idx)}
-                      className="btn-form btn-delete"
-                      title="Supprimer la question"
-                    >×</button>
-                  )}
+            <div key={idx} className="bg-gray-50 border border-gray-300 rounded-md overflow-hidden shadow-sm">
+              <RepeatableBlockActions
+                index={idx}
+                total={questions.length}
+                onMoveUp={() => moveQuestion(idx, 'up')}
+                onMoveDown={() => moveQuestion(idx, 'down')}
+                onRemove={questions.length > 1 ? () => removeQuestion(idx) : null}
+                title={`Question ${idx + 1}`}
+              />
+
+              <div className="p-4 bg-white space-y-4">
+                {/* Texte de la question & Complément */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Texte de la question <span style={{ display: 'none' }}>#{idx + 1}</span> *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Quel chanteur suisse a vendu le plus de disques ?"
+                      value={q.text}
+                      onChange={e => {
+                        const newQuestions = [...questions];
+                        newQuestions[idx].text = e.target.value;
+                        setQuestions(newQuestions);
+                      }}
+                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Complément d'information
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Effectivement, depuis 1884..."
+                      value={q.hint}
+                      onChange={e => {
+                        const newQuestions = [...questions];
+                        newQuestions[idx].hint = e.target.value;
+                        setQuestions(newQuestions);
+                      }}
+                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    />
+                  </div>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 mb-3">
-                <input
-                  type="text"
-                  placeholder="Texte de la question"
-                  value={q.text}
-                  onChange={e => {
-                    const newQuestions = [...questions];
-                    newQuestions[idx].text = e.target.value;
-                    setQuestions(newQuestions);
-                  }}
-                  className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Complément d'information"
-                  value={q.hint}
-                  onChange={e => {
-                    const newQuestions = [...questions];
-                    newQuestions[idx].hint = e.target.value;
-                    setQuestions(newQuestions);
-                  }}
-                  className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
 
-              {/* Image de la question */}
-              <div className="mb-3">
-                <ImageUploader
-                  type='quiz'
-                  initialUrl={q.img}
-                  oldUrl={q.img}
-                  label={`Image de la question ${idx + 1}`}
-                  disabled={false}
-                  onUpload={url => {
-                    const newQuestions = [...questions];
-                    newQuestions[idx].img = url;
-                    setQuestions(newQuestions);
-                  }}
-                />
-              </div>
-
-              <div className="mb-3">
-                <span className="block text-sm font-medium text-gray-700 mb-3">Réponses</span>
-                <div className="space-y-2">
-                  {q.answers.map((a, aIdx) => (
-                    <div key={aIdx} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder={`Réponse ${aIdx + 1}`}
-                        value={a.text}
-                        onChange={e => updateAnswer(idx, aIdx, 'text', e.target.value)}
-                        required
-                      />
-                      <input
-                        type="radio"
-                        name={`correct-answer-${idx}`}
-                        checked={a.isCorrect}
-                        onChange={() => setCorrectAnswer(idx, aIdx)}
-                        className="form-radio h-4 w-8 text-blue-600"
-                      />
-                    </div>
-                  ))}
+                {/* Image de la question */}
+                <div>
+                  <ImageUploader
+                    type="quiz"
+                    initialUrl={q.img}
+                    oldUrl={q.img}
+                    label="Image de la question"
+                    disabled={false}
+                    onUpload={url => {
+                      const newQuestions = [...questions];
+                      newQuestions[idx].img = url;
+                      setQuestions(newQuestions);
+                    }}
+                  />
                 </div>
-              </div>
 
-              {/* Checkbox hidePercent */}
-              <div className="mt-4 mb-3">
-                <label className="flex items-center gap-2 cursor-pointer">
+                {/* Réponses */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-2">
+                    Réponses possibles (Cochez la réponse correcte) <span style={{ display: 'none' }}>#{idx + 1}</span> *
+                  </label>
+                  <div className="space-y-2">
+                    {q.answers.map((a, aIdx) => (
+                      <div key={aIdx} className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <label style={{ display: 'none' }}>
+                            Réponse {aIdx + 1} de la question <span style={{ display: 'none' }}>#{idx + 1}</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            placeholder={["Stephan Eicher", "Bastian Baker", "DJ BoBo", "Gjon's Tears"][aIdx] || `Réponse ${aIdx + 1}`}
+                            value={a.text}
+                            onChange={e => updateAnswer(idx, aIdx, 'text', e.target.value)}
+                            required
+                          />
+                        </div>
+                        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                          <input
+                            type="radio"
+                            name={`correct-answer-${idx}`}
+                            checked={a.isCorrect}
+                            onChange={() => setCorrectAnswer(idx, aIdx)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                          />
+                          <span className="text-xs text-gray-500 font-medium">Correct</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Masquer les pourcentages */}
+                <div className="flex items-center">
                   <input
                     type="checkbox"
+                    id={`hidePercent-${idx}`}
                     checked={q.hidePercent || false}
                     onChange={e => {
                       const newQuestions = [...questions];
                       newQuestions[idx].hidePercent = e.target.checked;
                       setQuestions(newQuestions);
                     }}
-                    className="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2 cursor-pointer"
                   />
-                  <span className="text-sm font-medium text-gray-700">Masquer les pourcentages lors de la réponse</span>
-                </label>
+                  <label htmlFor={`hidePercent-${idx}`} className="block text-sm text-gray-700 select-none cursor-pointer">
+                    Masquer les pourcentages lors de la réponse
+                  </label>
+                </div>
               </div>
             </div>
           ))}
-          <button
-            type="button"
-            className="text-blick text-sm mt-3"
-            onClick={addQuestion}
-          >+ Ajouter une question</button>
         </div>
+        <button
+          type="button"
+          className="text-blick hover:underline text-sm mt-4 font-medium flex items-center"
+          onClick={addQuestion}
+        >
+          + Ajouter une question
+        </button>
       </div>
+
       {/* Bloc conclusion */}
       <div>
-        {/* <label className="block text-sm font-medium text-gray-700 mb-3">Conclusion</label> */}
-        <div className="flex gap-4">
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Texte de conclusion selon le score *
+        </label>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 border border-gray-300 p-4 rounded-md shadow-sm">
           <div className="flex flex-col w-full">
-            <label className="block text-sm font-medium text-gray-600 mb-3">Texte 0% - 33%</label>
+            <label className="block text-xs font-medium text-gray-500 mb-2">
+              Score : 0% - 33% *
+            </label>
             <textarea
-              className="field w-full h-48 resize-none px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Conclusion 1"
+              className="field w-full h-32 resize-none px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              placeholder="Peut mieux faire ! Relisez nos articles pour en apprendre davantage."
               value={conclusion.text1}
               onChange={e => setConclusion(c => ({ ...c, text1: e.target.value }))}
               rows={3}
+              required
             />
           </div>
           <div className="flex flex-col w-full">
-            <label className="block text-sm font-medium text-gray-600 mb-3">Texte 34% - 66%</label>
+            <label className="block text-xs font-medium text-gray-500 mb-2">
+              Score : 34% - 66% *
+            </label>
             <textarea
-              className="field w-full h-48 resize-none px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Conclusion 2"
+              className="field w-full h-32 resize-none px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              placeholder="Pas mal ! Vous avez de bonnes bases."
               value={conclusion.text2}
               onChange={e => setConclusion(c => ({ ...c, text2: e.target.value }))}
               rows={3}
+              required
             />
           </div>
           <div className="flex flex-col w-full">
-            <label className="block text-sm font-medium text-gray-600 mb-3">Texte 67% - 100%</label>
+            <label className="block text-xs font-medium text-gray-500 mb-2">
+              Score : 67% - 100% *
+            </label>
             <textarea
-              className="field w-full h-48 resize-none px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Conclusion 3"
+              className="field w-full h-32 resize-none px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              placeholder="Excellent ! Vous connaissez parfaitement le sujet !"
               value={conclusion.text3}
               onChange={e => setConclusion(c => ({ ...c, text3: e.target.value }))}
               rows={3}
+              required
             />
           </div>
         </div>
       </div>
-    </form>
+    </div>
   );
 }
 

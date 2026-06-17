@@ -1,24 +1,30 @@
 import React, { useState, useEffect } from 'react';
+import RepeatableBlockActions from './RepeatableBlockActions';
 
 function CalendarForm({ currentEmbed, formMode, onChange }) {
   // States pour les champs du calendrier
   const [calName, setCalName] = useState('');
   const [calWording, setCalWording] = useState('');
-  const [nbElements, setNbElements] = useState(3);
+  const [nbElements, setNbElements] = useState('tous');
   const [dates, setDates] = useState([
     { id: Math.random().toString(36).substr(2, 9), text: '', date: '', endDate: '', showBadge: false, liveLinkEnabled: false, liveLinkUrl: '' }
   ]);
   const [linkGlobalTxt, setLinkGlobalTxt] = useState('');
   const [linkGlobalHref, setLinkGlobalHref] = useState('');
   const [linkGlobalNewTab, setLinkGlobalNewTab] = useState(false);
+  const [brand, setBrand] = useState('blick');
+  const [theme, setTheme] = useState(null);
 
   // Initialisation des données en mode édition
   useEffect(() => {
     if (formMode === 'edit' && currentEmbed) {
-      setCalName(currentEmbed.calName || '');
-      setCalWording(currentEmbed.calWording || '');
+      setCalName(currentEmbed.calName || currentEmbed.calWording || '');
+      setCalWording(currentEmbed.calWording || currentEmbed.calName || '');
+      setBrand(currentEmbed.brand || 'blick');
+      setTheme(currentEmbed.theme || null);
       // Map nbElemsToShow -> nbElements
-      setNbElements(currentEmbed.nbElemsToShow || 3);
+      const loadedNb = currentEmbed.nbElemsToShow;
+      setNbElements(loadedNb === 100 || loadedNb === '100' || loadedNb === 'tous' ? 'tous' : (loadedNb || 'tous'));
       
       const formatDateForInput = (timestampOrDate) => {
         if (!timestampOrDate) return '';
@@ -77,9 +83,11 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
       linkGlobalTxt,
       linkGlobalHref,
       linkGlobalNewTab,
+      brand,
+      theme,
       type: 'calendar'
     });
-  }, [calName, calWording, nbElements, dates, linkGlobalTxt, linkGlobalHref, linkGlobalNewTab, onChange]);
+  }, [calName, calWording, nbElements, dates, linkGlobalTxt, linkGlobalHref, linkGlobalNewTab, brand, theme, onChange]);
 
   // Gestion des dates
   const handleDateChange = (index, field, value) => {
@@ -130,42 +138,95 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
 
   return (
     <div className="space-y-6">
-      {/* Section 1 : Titre et Wording */}
-      <div className="flex gap-4">
-        <div className="w-[45%]">
+      {/* Brand choice & Rubrique */}
+      <div className="flex gap-6 items-start">
+        {/* Brand */}
+        <div className="flex-none w-44">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Titre du calendrier *
+            Brand
           </label>
-          <input
-            type="text"
-            value={calName}
-            onChange={(e) => setCalName(e.target.value)}
-            placeholder="Matchs de poules Suisse - Mondial 2026"
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
+          <div className="flex gap-4 items-center h-12">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name="brand"
+                value="blick"
+                checked={brand === 'blick'}
+                onChange={() => setBrand('blick')}
+                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+              />
+              <span className="text-sm text-gray-700">Blick</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-not-allowed opacity-50 select-none" title="Le module de calendrier n'est pas encore compatible avec la brand PME.">
+              <input
+                type="radio"
+                name="brand"
+                value="pme"
+                checked={brand === 'pme'}
+                onChange={() => setBrand('pme')}
+                disabled
+                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-not-allowed"
+              />
+              <span className="text-sm text-gray-400">Pme</span>
+            </label>
+          </div>
         </div>
-        <div className="w-[45%]">
+
+        {/* Rubrique */}
+        <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Wording du calendrier
+            Rubrique *
+          </label>
+          <select
+            value={theme || ''}
+            onChange={(e) => setTheme(e.target.value || null)}
+            className={`field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!theme ? 'text-gray-400' : 'text-gray-700'
+              }`}
+            required
+          >
+            <option value="" disabled hidden>Sélectionner...</option>
+            <option value="Suisse" className="text-gray-700">Suisse</option>
+            <option value="Inter" className="text-gray-700">Inter</option>
+            <option value="Sport" className="text-gray-700">Sport</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="py-4">
+        <hr className="border-gray-200" />
+      </div>
+
+      {/* Section 1 : Wording et Nb éléments affichés */}
+      <div className="flex gap-4">
+        <div className="w-[75%]">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Wording du calendrier *
           </label>
           <input
             type="text"
             value={calWording}
-            onChange={(e) => setCalWording(e.target.value)}
-            placeholder="Ex: Ne ratez aucun match de la Nati"
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => {
+              setCalWording(e.target.value);
+              setCalName(e.target.value);
+            }}
+            placeholder="Ne ratez aucun match de la Nati"
+            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            required
           />
         </div>
-        <div className="w-[10%]">
+        <div className="w-[25%]">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Nb start
+            Nb. d'éléments affichés
           </label>
           <select
             value={nbElements}
-            onChange={(e) => setNbElements(parseInt(e.target.value, 10))}
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => {
+              const val = e.target.value;
+              setNbElements(val === 'tous' ? 'tous' : parseInt(val, 10));
+            }}
+            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
           >
+            <option value="tous">Tous</option>
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
               <option key={num} value={num}>{num}</option>
             ))}
@@ -180,132 +241,107 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
         </label>
         <div className="space-y-4">
           {dates.map((dateItem, index) => (
-            <div key={dateItem.id} className="border border-gray-300 rounded-md p-4 bg-gray-50">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-sm font-medium text-gray-700">Date {index + 1}</span>
-                <div className="flex gap-2">
-                  {/* <button
-                    type="button"
-                    onClick={() => moveDateUp(index)}
-                    disabled={index === 0}
-                    className="btn-form"
-                    title="Déplacer vers le haut"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveDateDown(index)}
-                    disabled={index === dates.length - 1}
-                    className="btn-form"
-                    title="Déplacer vers le bas"
-                  >
-                    ↓
-                  </button> */}
-                  {dates.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeDate(index)}
-                      className="btn-form btn-delete"
-                      title="Supprimer cette date"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              </div>
+            <div key={dateItem.id} className="bg-gray-50 border border-gray-300 rounded-md overflow-hidden shadow-sm">
+              <RepeatableBlockActions
+                index={index}
+                total={dates.length}
+                onRemove={dates.length > 1 ? removeDate : null}
+                title={`Date ${index + 1}`}
+              />
               
-              {/* Champs principaux : Label, Date, Terminé */}
-              <div className="grid grid-cols-2 gap-4 mb-2">
-                {/* Libellé (50%) */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">
-                    Wording 
-                  </label>
-                  <input
-                    type="text"
-                    value={dateItem.text}
-                    onChange={(e) => handleDateChange(index, 'text', e.target.value)}
-                    placeholder="Ex: Suisse - France"
-                    className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-                
-                {/* Dates (Start + End) aligned with column 2 */}
+              <div className="p-4 bg-white space-y-4">
+                {/* Champs principaux : Label, Date, Terminé */}
                 <div className="grid grid-cols-2 gap-4">
-                  {/* Date Début (25%) */}
+                  {/* Libellé (50%) */}
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">
-                      Start
+                      Wording 
                     </label>
                     <input
-                      type="datetime-local"
-                      value={dateItem.date}
-                      onChange={(e) => handleDateChange(index, 'date', e.target.value)}
-                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      type="text"
+                      value={dateItem.text}
+                      onChange={(e) => handleDateChange(index, 'text', e.target.value)}
+                      placeholder="Suisse - France"
+                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       required
                     />
                   </div>
+                  
+                  {/* Dates (Start + End) aligned with column 2 */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Date Début (25%) */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        Start
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={dateItem.date}
+                        onChange={(e) => handleDateChange(index, 'date', e.target.value)}
+                        className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        required
+                      />
+                    </div>
 
-                  {/* Date Fin (25%) */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
-                      End {dateItem.showBadge && '*'}
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={dateItem.endDate}
-                      onChange={(e) => handleDateChange(index, 'endDate', e.target.value)}
-                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required={dateItem.showBadge}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Options : Badges et Live Link */}
-              <div className="grid grid-cols-2 gap-4 items-start">
-                {/* Checkboxes */}
-                <div className="flex flex-row gap-6 pt-2">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id={`showBadge-${index}`}
-                      checked={dateItem.showBadge}
-                      onChange={(e) => handleDateChange(index, 'showBadge', e.target.checked)}
-                      className="mr-2"
-                    />
-                    <label htmlFor={`showBadge-${index}`} className="text-sm text-gray-700 select-none">
-                      Afficher les badges
-                    </label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id={`liveLink-${index}`}
-                      checked={dateItem.liveLinkEnabled}
-                      onChange={(e) => handleDateChange(index, 'liveLinkEnabled', e.target.checked)}
-                      className="mr-2"
-                    />
-                    <label htmlFor={`liveLink-${index}`} className="text-sm text-gray-700 select-none">
-                      Activer un lien live
-                    </label>
+                    {/* Date Fin (25%) */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        End {dateItem.showBadge && '*'}
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={dateItem.endDate}
+                        onChange={(e) => handleDateChange(index, 'endDate', e.target.value)}
+                        className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        required={dateItem.showBadge}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Champ URL Live conditionnel */}
-                {dateItem.liveLinkEnabled && (
-                  <div>
-                    <input
-                      type="url"
-                      value={dateItem.liveLinkUrl}
-                      onChange={(e) => handleDateChange(index, 'liveLinkUrl', e.target.value)}
-                      placeholder="URL du live"
-                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
+                {/* Options : Badges et Live Link */}
+                <div className="grid grid-cols-2 gap-4 items-start">
+                  {/* Checkboxes */}
+                  <div className="flex flex-row gap-6 pt-2">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`showBadge-${index}`}
+                        checked={dateItem.showBadge}
+                        onChange={(e) => handleDateChange(index, 'showBadge', e.target.checked)}
+                        className="mr-2"
+                      />
+                      <label htmlFor={`showBadge-${index}`} className="text-sm text-gray-700 select-none">
+                        Afficher les badges
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`liveLink-${index}`}
+                        checked={dateItem.liveLinkEnabled}
+                        onChange={(e) => handleDateChange(index, 'liveLinkEnabled', e.target.checked)}
+                        className="mr-2"
+                      />
+                      <label htmlFor={`liveLink-${index}`} className="text-sm text-gray-700 select-none">
+                        Activer un lien live
+                      </label>
+                    </div>
                   </div>
-                )}
+
+                  {/* Champ URL Live conditionnel */}
+                  {dateItem.liveLinkEnabled && (
+                    <div>
+                      <input
+                        type="url"
+                        value={dateItem.liveLinkUrl}
+                        onChange={(e) => handleDateChange(index, 'liveLinkUrl', e.target.value)}
+                        placeholder="URL du live"
+                        className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}

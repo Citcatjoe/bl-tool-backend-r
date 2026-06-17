@@ -17,6 +17,8 @@ import { getAuth } from 'firebase/auth';
 function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataChange, devMode }) {
   const [formData, setFormData] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
   
   // Déterminer le titre selon le mode et le type
   const getFormTitle = () => {
@@ -51,6 +53,11 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
     if (onClose) {
       onClose();
     }
+    // Retarder la remise à zéro des états pour que le fondu de fermeture (150ms) soit achevé
+    setTimeout(() => {
+      setErrorMessage('');
+      setIsSuccess(false);
+    }, 300);
   };
 
   // Handler pour les changements dans les sous-formulaires (optimisé avec useCallback)
@@ -60,8 +67,57 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
   // Handler pour la sauvegarde
   const handleSave = async () => {
+    setErrorMessage('');
+    setIsSuccess(false);
+
+    // Effacer toutes les surbrillances rouges existantes dans le DOM
+    const formElement = document.getElementById('form');
+    if (formElement) {
+      formElement.querySelectorAll('.text-red-600').forEach(el => {
+        el.classList.remove('text-red-600', 'font-bold');
+        el.classList.add('text-gray-700');
+      });
+      formElement.querySelectorAll('.border-red-500').forEach(el => {
+        el.classList.remove('border-red-500', 'focus:ring-red-500');
+        el.classList.add('border-gray-300', 'focus:ring-blue-500');
+      });
+    }
+
+    const triggerValidationError = (labelText, inputSelector = 'input, textarea, select') => {
+      setIsLoading(false);
+      
+      if (!formElement || !labelText) return;
+
+      // Recherche du label par son texte
+      const labels = Array.from(formElement.querySelectorAll('label, h3, h4'));
+      const targetLabel = labels.find(label => {
+        const text = label.textContent.toLowerCase();
+        return text.includes(labelText.toLowerCase());
+      });
+
+      if (targetLabel) {
+        // Appliquer la couleur rouge au label
+        targetLabel.classList.remove('text-gray-700', 'text-gray-500');
+        targetLabel.classList.add('text-red-600', 'font-bold');
+        
+        // Appliquer la bordure rouge au champ de saisie associé
+        const parentDiv = targetLabel.closest('div');
+        if (parentDiv) {
+          const input = parentDiv.querySelector(inputSelector);
+          if (input) {
+            input.classList.remove('border-gray-300', 'focus:ring-blue-500');
+            input.classList.add('border-red-500', 'focus:ring-red-500');
+            input.focus();
+          }
+        }
+        
+        // Défilement fluide vers le label problématique
+        targetLabel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+
     if (!formData || Object.keys(formData).length === 0) {
-      alert('Veuillez remplir les champs requis');
+      triggerValidationError('Question');
       return;
     }
 
@@ -79,25 +135,35 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
       // Construction des données selon le type
       if (formData.type === 'poll') {
         // Validation spécifique aux sondages
-        if (!formData.pollTxt || !Array.isArray(formData.answerTxts) || !Array.isArray(formData.answerCounters) || formData.answerTxts.length < 2) {
-          alert('Un sondage doit avoir une question et au moins 2 réponses');
+        if (!formData.theme) {
+          triggerValidationError('Rubrique');
+          return;
+        }
+        if (!formData.pollTxt) {
+          triggerValidationError('Question du sondage');
+          return;
+        }
+        if (!Array.isArray(formData.answerTxts) || formData.answerTxts.length < 2) {
+          triggerValidationError('Réponses possibles');
           return;
         }
 
         // Vérifier que les réponses ne sont pas vides
         const validTxts = formData.answerTxts.filter(txt => txt && txt.trim() !== '');
         if (validTxts.length < 2) {
-          alert('Un sondage doit avoir au moins 2 réponses non vides');
+          triggerValidationError('Réponses possibles');
           return;
         }
 
         // Filtrer les compteurs en fonction des réponses valides
         const filteredTxts = [];
         const filteredCounters = [];
+        const filteredOriginalTxts = [];
         formData.answerTxts.forEach((txt, i) => {
           if (txt && txt.trim() !== '') {
             filteredTxts.push(txt.trim());
             filteredCounters.push(formData.answerCounters[i] ?? 0);
+            filteredOriginalTxts.push(formData.answerOriginalTxts?.[i] ?? '');
           }
         });
 
@@ -107,9 +173,14 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           answerTxts: filteredTxts,
           answerCounters: filteredCounters,
           brand: formData.brand || 'blick',
+          theme: formData.theme,
           timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
           timeUpdated: serverTimestamp()
         };
+
+        if (formMode === 'edit') {
+          saveData.answerOriginalTxts = filteredOriginalTxts;
+        }
 
         // L'auteur et le champ deleted ne sont définis que lors de la création
         if (formMode === 'create') {
@@ -119,12 +190,16 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         
       } else if (formData.type === 'calendar') {
         // Validation spécifique aux calendriers
+        if (!formData.theme) {
+          triggerValidationError('Rubrique');
+          return;
+        }
         if (!formData.calName) {
-          alert('Un calendrier doit avoir un titre');
+          triggerValidationError('Wording du calendrier');
           return;
         }
         if (!formData.dates || formData.dates.length === 0) {
-          alert('Un calendrier doit avoir au moins une date');
+          triggerValidationError('Dates');
           return;
         }
 
@@ -137,20 +212,24 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         });
 
         if (hasInvalidDates) {
-          alert('Toutes les dates doivent avoir un libellé et une date de début. Si "Afficher les badges" est coché, la date de fin est obligatoire.');
+          triggerValidationError('Dates');
           return;
         }
 
         // Vérifier que si liveLinkEnabled est true, liveLinkUrl est rempli
         const hasInvalidLiveLinks = formData.dates.some(date => date.liveLinkEnabled && (!date.liveLinkUrl || date.liveLinkUrl.trim() === ''));
         if (hasInvalidLiveLinks) {
-          alert('Si "Activer un lien live" est coché, l\'URL du live doit être renseignée');
+          triggerValidationError('Dates');
           return;
         }
 
         // Vérifier que linkGlobalTxt et linkGlobalHref sont mutuellement inclusifs
-        if ((formData.linkGlobalTxt && !formData.linkGlobalHref) || (!formData.linkGlobalTxt && formData.linkGlobalHref)) {
-          alert('Pour le lien global, le texte et l\'URL doivent être tous les deux renseignés (ou aucun)');
+        if (formData.linkGlobalTxt && !formData.linkGlobalHref) {
+          triggerValidationError('Url du lien global');
+          return;
+        }
+        if (!formData.linkGlobalTxt && formData.linkGlobalHref) {
+          triggerValidationError('Texte de lien global');
           return;
         }
 
@@ -186,11 +265,13 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           type: 'calendar',
           calName: formData.calName,
           calWording: formData.calWording || '', // Keeping as optional per implementation plan notes
-          nbElemsToShow: formData.nbElements || 3,
+          nbElemsToShow: formData.nbElements === 'tous' ? 100 : (formData.nbElements || 100),
           dates: datesToSave,
           linkGlobalTxt: formData.linkGlobalTxt || '',
           linkGlobalHref: formData.linkGlobalHref || '',
           linkGlobalNewTab: formData.linkGlobalNewTab || false,
+          brand: formData.brand || 'blick',
+          theme: formData.theme,
           timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
           timeUpdated: serverTimestamp(),
           counterSeeAllClicks: formMode === 'create' ? 0 : (currentEmbed?.counterSeeAllClicks || 0),
@@ -205,12 +286,28 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         
       } else if (formData.type === 'teaser') {
         // Validation spécifique aux teasers
-        if (!formData.teaserLabel || !formData.teaserTitle) {
-          alert('Un teaser doit avoir un label et un titre');
+        if (!formData.theme) {
+          triggerValidationError('Rubrique');
+          return;
+        }
+        if (!formData.teaserLabel) {
+          triggerValidationError('Label du teaser');
+          return;
+        }
+        if (!formData.teaserTitle) {
+          triggerValidationError('Titre du teaser');
           return;
         }
         if (!formData.img) {
-          alert('Un teaser doit avoir une image uploadée');
+          triggerValidationError('Image');
+          return;
+        }
+        if (!formData.linkGlobalTxt) {
+          triggerValidationError('Label du bouton');
+          return;
+        }
+        if (!formData.linkGlobalHref) {
+          triggerValidationError('Lien du bouton');
           return;
         }
 
@@ -222,6 +319,8 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           linkGlobalHref: formData.linkGlobalHref || '',
           linkGlobalNewTab: formData.linkGlobalNewTab || false,
           img: formData.img || '',
+          brand: formData.brand || 'blick',
+          theme: formData.theme,
           timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
           timeUpdated: serverTimestamp()
         };
@@ -230,24 +329,50 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         if (formMode === 'create') {
           saveData.author = currentUser.email;
           saveData.deleted = false;
+          saveData.counterViews = 0;
+          saveData.counterClicks = 0;
         }
         
       } else if (formData.type === 'folder') {
         // Validation spécifique aux dossiers
-        if (!formData.folderName || !formData.folderLabel) {
-          alert('Un dossier doit avoir un nom et un label');
+        if (!formData.theme) {
+          triggerValidationError('Rubrique');
+          return;
+        }
+        if (!formData.folderName) {
+          triggerValidationError('Nom du dossier');
+          return;
+        }
+        if (!formData.folderLabel) {
+          triggerValidationError('Label du dossier');
           return;
         }
 
         // Vérifier qu'il y a au moins un bouton avec texte et URL
         if (!formData.buttons || formData.buttons.length === 0) {
-          alert('Un dossier doit avoir au moins un bouton');
+          triggerValidationError('Texte du bouton #1');
           return;
+        }
+
+        // Vérifier les erreurs de champs incomplets (texte renseigné mais pas URL, ou inversement)
+        for (let i = 0; i < formData.buttons.length; i++) {
+          const btn = formData.buttons[i];
+          const hasTxt = btn.buttonTxt && btn.buttonTxt.trim() !== '';
+          const hasUrl = btn.buttonUrl && btn.buttonUrl.trim() !== '';
+          
+          if (hasTxt && !hasUrl) {
+            triggerValidationError(`Url du bouton #${i + 1}`);
+            return;
+          }
+          if (!hasTxt && hasUrl) {
+            triggerValidationError(`Texte du bouton #${i + 1}`);
+            return;
+          }
         }
 
         const validButtons = formData.buttons.filter(button => button.buttonTxt && button.buttonTxt.trim() !== '' && button.buttonUrl && button.buttonUrl.trim() !== '');
         if (validButtons.length === 0) {
-          alert('Un dossier doit avoir au moins un bouton avec un texte et une URL');
+          triggerValidationError('Texte du bouton #1');
           return;
         }
 
@@ -263,6 +388,8 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             buttonOpensNewTab: button.buttonOpensNewTab || false,
             buttonCounterClicks: 0
           })),
+          brand: formData.brand || 'blick',
+          theme: formData.theme,
           timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
           timeUpdated: serverTimestamp()
         };
@@ -274,23 +401,40 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         }
       } else if (formData.type === 'tinder') {
         // Validation spécifique aux tinder
-        if (!formData.tinderLabel || !formData.tinderTitle) {
-          alert('Un Tinder doit avoir un label et un titre');
+        if (!formData.theme) {
+          triggerValidationError('Rubrique');
+          return;
+        }
+        if (!formData.tinderLabel || formData.tinderLabel.trim() === '') {
+          triggerValidationError('Label du Tinder');
+          return;
+        }
+        if (!formData.tinderTitle || formData.tinderTitle.trim() === '') {
+          triggerValidationError('Titre du Tinder');
           return;
         }
         if (!formData.tinderCards || formData.tinderCards.length < 1) {
-          alert('Un Tinder doit avoir au moins une carte');
+          triggerValidationError('Label de la carte #1');
           return;
         }
         if (formData.tinderCards.length > 3) {
-          alert('Un Tinder ne peut pas avoir plus de 3 cartes');
+          triggerValidationError('Label de la carte #1');
           return;
         }
         // Vérifier que chaque carte a un label et un titre
-        const validCards = formData.tinderCards.filter(card => card.tinderCardLabel && card.tinderCardTitle);
-        if (validCards.length !== formData.tinderCards.length) {
-          alert('Chaque carte doit avoir un label et un titre');
-          return;
+        for (let i = 0; i < formData.tinderCards.length; i++) {
+          const card = formData.tinderCards[i];
+          const hasLabel = card.tinderCardLabel && card.tinderCardLabel.trim() !== '';
+          const hasTitle = card.tinderCardTitle && card.tinderCardTitle.trim() !== '';
+          
+          if (!hasLabel) {
+            triggerValidationError(`Label de la carte #${i + 1}`);
+            return;
+          }
+          if (!hasTitle) {
+            triggerValidationError(`Titre de la carte #${i + 1}`);
+            return;
+          }
         }
         // Légende
         const legend = formData.tinderLegend || { txt: '', display: true };
@@ -308,6 +452,8 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             txt: legend.txt || '',
             display: legend.display ?? true,
           },
+          brand: formData.brand || 'blick',
+          theme: formData.theme,
           counterViews: formMode === 'create' ? 0 : (formData.counterViews ?? 0),
           timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
           timeUpdated: serverTimestamp()
@@ -317,39 +463,71 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           saveData.deleted = false;
         }
       } else if (formData.type === 'quiz') {
+        // Validation spécifique aux quiz
+        if (!formData.theme) {
+          triggerValidationError('Rubrique');
+          return;
+        }
         // Validation minimale
         if (!formData.title || formData.title.trim() === '') {
-          alert('Un quiz doit avoir un titre');
+          triggerValidationError('Titre du quiz');
           return;
         }
 
         if (!formData.statsQuestions || !Array.isArray(formData.statsQuestions) || formData.statsQuestions.length !== formData.questions.length) {
-          alert('Le tableau statsQuestions doit être synchronisé avec questions');
+          triggerValidationError('Texte de la question #1');
           return;
         }
 
-        // Validation : chaque question doit avoir un texte non vide
-        if (!formData.questions || !Array.isArray(formData.questions) || formData.questions.some(q => !q.text || q.text.trim() === '')) {
-          alert('Chaque question doit avoir un énoncé');
+        // Validation : chaque question doit avoir un texte non vide et ses réponses valides
+        if (!formData.questions || !Array.isArray(formData.questions) || formData.questions.length === 0) {
+          triggerValidationError('Texte de la question #1');
           return;
         }
 
-        // Validation : chaque question doit proposer 4 réponses non vides
-        if (formData.questions.some(q => !q.answers || q.answers.length !== 4 || q.answers.some(a => !a.text || a.text.trim() === ''))) {
-          alert('Les questions doivent proposer 4 possibilités de réponses');
-          return;
-        }
+        for (let i = 0; i < formData.questions.length; i++) {
+          const q = formData.questions[i];
+          
+          // 1. Texte de la question
+          if (!q.text || q.text.trim() === '') {
+            triggerValidationError(`Texte de la question #${i + 1}`);
+            return;
+          }
 
-        // Validation : chaque question doit avoir une réponse correcte
-        if (formData.questions.some(q => !q.answers.some(a => a.isCorrect))) {
-          alert('Une des quatre propositions de réponse doit être définie comme correcte');
-          return;
+          // 2. Réponses (doivent être au nombre de 4 et toutes non vides)
+          if (!q.answers || q.answers.length !== 4) {
+            triggerValidationError(`Réponse 1 de la question #${i + 1}`);
+            return;
+          }
+
+          for (let aIdx = 0; aIdx < q.answers.length; aIdx++) {
+            const ans = q.answers[aIdx];
+            if (!ans.text || ans.text.trim() === '') {
+              triggerValidationError(`Réponse ${aIdx + 1} de la question #${i + 1}`);
+              return;
+            }
+          }
+
+          // 3. Cochez la réponse correcte
+          const hasCorrect = q.answers.some(ans => ans.isCorrect);
+          if (!hasCorrect) {
+            triggerValidationError(`Réponses possibles (Cochez la réponse correcte) #${i + 1}`);
+            return;
+          }
         }
 
         // Validation : les trois champs de conclusion doivent être remplis
         const conclusion = formData.conclusion || { text1: '', text2: '', text3: '' };
-        if (!conclusion.text1 || conclusion.text1.trim() === '' || !conclusion.text2 || conclusion.text2.trim() === '' || !conclusion.text3 || conclusion.text3.trim() === '') {
-          alert('Les trois champs de conclusion doivent être remplis');
+        if (!conclusion.text1 || conclusion.text1.trim() === '') {
+          triggerValidationError('Score : 0% - 33%');
+          return;
+        }
+        if (!conclusion.text2 || conclusion.text2.trim() === '') {
+          triggerValidationError('Score : 34% - 66%');
+          return;
+        }
+        if (!conclusion.text3 || conclusion.text3.trim() === '') {
+          triggerValidationError('Score : 67% - 100%');
           return;
         }
 
@@ -393,6 +571,8 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             scoreDistribution,
           },
           conclusion,
+          brand: formData.brand || 'blick',
+          theme: formData.theme,
         };
         if (formMode === 'create') {
           saveData.author = currentUser.email;
@@ -403,23 +583,23 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         saveData.timeUpdated = serverTimestamp();
       } else if (formData.type === 'testimony') {
         // Validation spécifique aux témoignages
-        if (!formData.title || formData.title.trim() === '') {
-          alert('Un appel à témoignage doit avoir un titre d\'élément');
+        if (!formData.theme) {
+          triggerValidationError('Rubrique');
           return;
         }
 
         if (!formData.content || !formData.content.title || formData.content.title.trim() === '') {
-          alert('Un appel à témoignage doit avoir un titre d\'appel');
+          triggerValidationError("Titre de l'appel à témoignage");
           return;
         }
 
         if (!formData.content.subject || formData.content.subject.trim() === '') {
-          alert('Un appel à témoignage doit avoir un sujet');
+          triggerValidationError('Sujet');
           return;
         }
 
         if (!formData.content.question || formData.content.question.trim() === '') {
-          alert('Un appel à témoignage doit avoir une question');
+          triggerValidationError('Question');
           return;
         }
 
@@ -440,6 +620,8 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         saveData = {
           type: 'testimony',
           title: formData.title.trim(),
+          brand: formData.brand || 'blick',
+          theme: formData.theme,
           content: {
             title: formData.content.title.trim(),
             subject: formData.content.subject.trim(),
@@ -452,37 +634,52 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           saveData.author = currentUser.email;
           saveData.deleted = false;
           saveData.timeCreated = serverTimestamp();
+          saveData.counterViews = 0;
+          saveData.counterMsgSent = 0;
         }
         // Toujours mettre à jour timeUpdated
         saveData.timeUpdated = serverTimestamp();
       } else if (formData.type === 'potm') {
         // Validation spécifique au joueur du match
-        if (!formData.context || !formData.context.context || !formData.context.category) {
-          alert('Le contexte et la catégorie doivent être renseignés');
+        if (!formData.theme) {
+          triggerValidationError('Rubrique');
+          return;
+        }
+
+        if (!formData.context || !formData.context.context) {
+          triggerValidationError('Contexte');
+          return;
+        }
+        if (!formData.context.category) {
+          triggerValidationError('Catégorie');
           return;
         }
 
         if (!formData.context.text || formData.context.text.trim() === '') {
-          alert('Le label du match doit être renseigné');
+          triggerValidationError('Label du match');
           return;
         }
 
         if (!formData.context.date || (typeof formData.context.date === 'string' && formData.context.date.trim() === '')) {
-          alert('La date du match doit être renseignée');
+          triggerValidationError('Date du match');
           return;
         }
 
         if (!formData.players || !Array.isArray(formData.players) || formData.players.length < 2) {
-          alert('Il faut au moins 2 candidats');
+          triggerValidationError('Candidats');
           return;
         }
 
         // Vérifier que tous les joueurs ont un nom
-        const validPlayers = formData.players.filter(player => player.name && player.name.trim() !== '');
-        if (validPlayers.length < 2) {
-          alert('Au moins 2 candidats doivent avoir un nom');
-          return;
+        for (let i = 0; i < formData.players.length; i++) {
+          const player = formData.players[i];
+          if (!player.name || player.name.trim() === '') {
+            triggerValidationError(`Nom du joueur #${i + 1}`);
+            return;
+          }
         }
+
+        const validPlayers = formData.players;
 
         // Conversion de la date en Timestamp Firebase
         let matchDateTimestamp = null;
@@ -494,7 +691,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           }
         } catch (error) {
           console.warn('Erreur lors de la conversion de la date:', error);
-          alert('Format de date invalide');
+          triggerValidationError('Date du match');
           return;
         }
 
@@ -524,6 +721,8 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             date: matchDateTimestamp
           },
           players: playersToSave,
+          brand: formData.brand || 'blick',
+          theme: formData.theme,
           counterViews: formMode === 'create' ? 0 : (currentEmbed?.counterViews || 0),
           totalVotes: formMode === 'create' ? 0 : (currentEmbed?.totalVotes || 0)
         };
@@ -537,13 +736,25 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         saveData.timeUpdated = serverTimestamp();
       } else if (formData.type === 'prono') {
         // Validation spécifique aux pronostics
-        if (!formData.pronoData || !formData.pronoData.item1 || !formData.pronoData.item1.name || !formData.pronoData.item2 || !formData.pronoData.item2.name) {
-          alert("Les noms des deux équipes/joueurs sont obligatoires");
+        if (!formData.theme) {
+          triggerValidationError('Rubrique');
           return;
         }
-        if (!formData.pronoData.event || !formData.pronoData.date) {
-            alert("Le contexte et la date sont obligatoires");
-            return;
+        if (!formData.pronoData || !formData.pronoData.event || (typeof formData.pronoData.event === 'string' && formData.pronoData.event.trim() === '')) {
+          triggerValidationError("Contexte");
+          return;
+        }
+        if (!formData.pronoData || !formData.pronoData.date) {
+          triggerValidationError("Date");
+          return;
+        }
+        if (!formData.pronoData || !formData.pronoData.item1 || !formData.pronoData.item1.name) {
+          triggerValidationError('Équipe 1');
+          return;
+        }
+        if (!formData.pronoData || !formData.pronoData.item2 || !formData.pronoData.item2.name) {
+          triggerValidationError('Équipe 2');
+          return;
         }
 
         // Conversion Date -> Timestamp
@@ -584,6 +795,8 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
                   votes: formMode === 'create' ? 1 : (formData.pronoData.item3?.votes || 0)
               }
           },
+          brand: formData.brand || 'blick',
+          theme: formData.theme,
           counterViews: formMode === 'create' ? 0 : (currentEmbed?.counterViews || 0)
         };
 
@@ -594,12 +807,16 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         }
         saveData.timeUpdated = serverTimestamp();
       } else if (formData.type === 'facts') {
+        if (!formData.theme) {
+          triggerValidationError('Rubrique');
+          return;
+        }
         if (!formData.factsData || !formData.factsData.rencontre || formData.factsData.rencontre.trim() === '') {
-          alert('La rencontre doit être renseignée');
+          triggerValidationError('Rencontre');
           return;
         }
         if (!formData.factsData.date || formData.factsData.date.trim() === '') {
-          alert('La date doit être renseignée');
+          triggerValidationError('Date');
           return;
         }
 
@@ -612,7 +829,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           }
         } catch (error) {
           console.warn('Erreur lors de la conversion de la date:', error);
-          alert('Format de date invalide');
+          triggerValidationError('Date');
           return;
         }
 
@@ -621,50 +838,50 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           const item = formData.factsData.items[i];
 
           if (!item.title || item.title.trim() === '') {
-             alert(`Le fait marquant #${i + 1} doit obligatoirement comporter un "Titre".`);
+             triggerValidationError('Titre');
              return;
           }
 
           if (item.type === 'normal') {
              if (!item.text || item.text.trim() === '') {
-                alert(`Le fait marquant #${i + 1} (Normal) doit obligatoirement comporter un "Contenu".`);
+                triggerValidationError('Contenu');
                 return;
              }
           }
 
           if (item.type === 'quote') {
              if (!item.text || item.text.trim() === '') {
-                alert(`Le fait marquant #${i + 1} (Citation) doit obligatoirement comporter une "Citation".`);
+                triggerValidationError('Citation');
                 return;
              }
              if (!item.author || item.author.trim() === '') {
-                alert(`Le fait marquant #${i + 1} (Citation) doit obligatoirement comporter un "Auteur de la citation".`);
+                triggerValidationError('Auteur');
                 return;
              }
           }
 
           if (item.type === 'picture') {
              if (!item.src || item.src.trim() === '') {
-                alert(`Le fait marquant #${i + 1} (Image) doit obligatoirement comporter une image validée.`);
+                triggerValidationError('Image');
                 return;
              }
              if (!item.text || item.text.trim() === '') {
-                alert(`Le fait marquant #${i + 1} (Image) doit obligatoirement comporter un "Contenu".`);
+                triggerValidationError('Contenu');
                 return;
              }
              if (!item.caption || item.caption.trim() === '') {
-                alert(`Le fait marquant #${i + 1} (Image) doit obligatoirement comporter un Crédit.`);
+                triggerValidationError('Crédit');
                 return;
              }
           }
 
           if (item.type === 'number') {
              if (item.value === undefined || item.value === null || item.value === '') {
-                alert(`Le fait marquant #${i + 1} (Chiffre) doit obligatoirement comporter un "Chiffre".`);
+                triggerValidationError('Chiffre');
                 return;
              }
              if (!item.text || item.text.trim() === '') {
-                alert(`Le fait marquant #${i + 1} (Chiffre) doit obligatoirement comporter une "Description".`);
+                triggerValidationError('Description');
                 return;
              }
           }
@@ -693,6 +910,8 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         saveData = {
           type: 'facts',
+          brand: formData.brand || 'blick',
+          theme: formData.theme,
           counterViews: formMode === 'create' ? 0 : (currentEmbed?.counterViews || 0)
         };
 
@@ -703,6 +922,13 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         };
 
         saveData.factsData = factsDataObj;
+
+        // Handle ratingStats (or legacy voteStats)
+        if (formData.ratingStats !== undefined) {
+          saveData.ratingStats = formData.ratingStats;
+        } else if (formData.voteStats !== undefined) {
+          saveData.ratingStats = formData.voteStats;
+        }
 
         if (formMode === 'create') {
           saveData.author = currentUser.email;
@@ -730,12 +956,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         else if (formData.type === 'prono') successMessage = 'Pronostic créé avec succès !';
         else if (formData.type === 'facts') successMessage = 'Faits marquants créés avec succès !';
         
-        alert(successMessage);
-        
-        // Déclencher un rafraîchissement des données si en mode non temps réel
-        if (onDataChange) {
-          onDataChange();
-        }
+        console.log(successMessage);
         
       } else if (formMode === 'edit') {
         // Mise à jour d'un élément existant
@@ -952,15 +1173,26 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             const currentTxts = currentData.answerTxts || [];
             const currentCounters = currentData.answerCounters || [];
             
-            // Fusionner les compteurs : si le texte est identique à un existant, on garde le compteur
-            // Sinon (nouveau texte ou texte modifié), on repart à 0
-            const mergedCounters = saveData.answerTxts.map((newTxt) => {
-              const existingIndex = currentTxts.indexOf(newTxt);
-              return existingIndex !== -1 ? (currentCounters[existingIndex] || 0) : 0;
+            const originalTxts = saveData.answerOriginalTxts || [];
+            
+            // Fusionner les compteurs : si le texte original existait déjà, on garde son compteur.
+            // Sinon (nouveau texte ou texte modifié), on repart à 0 ou on cherche par texte.
+            const mergedCounters = saveData.answerTxts.map((newTxt, idx) => {
+              const origTxt = originalTxts[idx];
+              if (origTxt && origTxt.trim() !== '') {
+                const existingIndexByOrig = currentTxts.indexOf(origTxt.trim());
+                if (existingIndexByOrig !== -1) {
+                  return currentCounters[existingIndexByOrig] || 0;
+                }
+              }
+              const existingIndexByNew = currentTxts.indexOf(newTxt);
+              return existingIndexByNew !== -1 ? (currentCounters[existingIndexByNew] || 0) : 0;
             });
             
+            // Retirer `answerOriginalTxts` de saveData pour ne pas polluer Firestore
+            const { answerOriginalTxts, ...dataToSave } = saveData;
             const updatedSaveData = {
-              ...saveData,
+              ...dataToSave,
               answerCounters: mergedCounters
             };
             
@@ -985,39 +1217,41 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         else if (formData.type === 'prono') successMessage = 'Pronostic modifié avec succès !';
         else if (formData.type === 'facts') successMessage = 'Faits marquants modifiés avec succès !';
         
-        alert(successMessage);
-        
-        // Déclencher un rafraîchissement des données si en mode non temps réel
+        console.log(successMessage);
+      }
+      
+      setIsSuccess(true);
+      setTimeout(() => {
         if (onDataChange) {
           onDataChange();
         }
-      }
-      
-      handleClose();
+        handleClose();
+      }, 1000);
       
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert(`Erreur lors de la sauvegarde: ${error.message}`);
+      setErrorMessage(`Erreur lors de la sauvegarde : ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div id="form" className={s.form + (formVisible ? ' ' + s.isVisible : '') + ' max-w-4xl w-full h-auto overflow-y-auto fixed top-1/2 left-1/2 bg-white rounded-xl shadow-lg z-40'}>
+    <div id="form" className={s.form + (formVisible ? ' ' + s.isVisible : '') + ' max-w-4xl w-full h-auto overflow-y-auto fixed top-1/2 left-1/2 bg-white rounded-xl shadow-lg z-40 flex flex-col'}>
+      {/* En-tête avec titre et bouton fermer */}
+      <div className="flex justify-between items-center px-6 py-4 bg-gray-200 border-b border-gray-300 rounded-t-xl">
+        <h2 className="text-xl font-bold text-gray-800">{getFormTitle()}</h2>
+        <button 
+          onClick={handleClose}
+          className="text-gray-500 hover:text-gray-700 text-2xl font-semibold transition-colors"
+          title="Fermer"
+          disabled={isLoading}
+        >
+          ×
+        </button>
+      </div>
+
       <div className="p-6">
-        {/* En-tête avec titre et bouton fermer */}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">{getFormTitle()}</h2>
-          <button 
-            onClick={handleClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
-            title="Fermer"
-            disabled={isLoading}
-          >
-            ×
-          </button>
-        </div>
 
         {/* Debug info (visible uniquement en mode développeur) */}
         {devMode && (
@@ -1109,21 +1343,30 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           />
         )}
 
+        {errorMessage && errorMessage.startsWith('Erreur lors de la sauvegarde') && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm font-medium rounded-lg text-center animate-fade-in flex items-center justify-center gap-2">
+            <span>⚠️ {errorMessage}</span>
+          </div>
+        )}
+
         {/* Boutons d'action */}
         <div className="flex justify-end gap-2 mt-6">
           <button
             onClick={handleClose}
             className="w-1/2 px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-            disabled={isLoading}
+            disabled={isLoading || isSuccess}
           >
             Annuler
           </button>
           <button
             onClick={handleSave}
-            className="w-1/2 btn-primary"
-            disabled={isLoading}
+            className={`w-1/2 rounded-md font-bold transition-all duration-300 ${
+              isSuccess ? 'text-white border-green-600' : 'btn-primary'
+            }`}
+            style={isSuccess ? { backgroundColor: '#22c55e', borderColor: '#22c55e', color: 'white', cursor: 'default' } : {}}
+            disabled={isLoading || isSuccess}
           >
-            {isLoading ? 'Sauvegarde...' : 'Sauvegarder'}
+            {isSuccess ? '✓ Enregistré !' : (isLoading ? 'Sauvegarde...' : 'Sauvegarder')}
           </button>
         </div>
       </div>

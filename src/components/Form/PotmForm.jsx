@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import teamsData from '../../data/teams.json';
 import contextsData from '../../data/contexts.json';
+import RepeatableBlockActions from './RepeatableBlockActions';
 
 function PotmForm({ currentEmbed, formMode, onChange }) {
   // States pour les champs du POTM
@@ -12,6 +13,9 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
     { id: Date.now() + '-0', name: '', position: 'Attaquant', team: 'Suisse', votes: 0 },
     { id: Date.now() + '-1', name: '', position: 'Attaquant', team: 'Suisse', votes: 0 }
   ]);
+  // Brand & theme (rubrique)
+  const [brand, setBrand] = useState('blick');
+  const [theme, setTheme] = useState(null);
 
   // Initialisation des données en mode édition
   useEffect(() => {
@@ -19,6 +23,8 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
       setContext(currentEmbed.context?.context || currentEmbed.context?.sport || 'national');
       setCategory(currentEmbed.context?.category || 'Messieurs');
       setMatchText(currentEmbed.context?.text || '');
+      setBrand(currentEmbed.brand || 'blick');
+      setTheme(currentEmbed.theme || null);
       
       // Convertir le Timestamp Firebase en format date
       if (currentEmbed.context?.date) {
@@ -93,11 +99,8 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
             color: teamData ? teamData.color : '#000000',
             type: teamData ? teamData.type : 'national',
             img: teamData && teamData.type === 'national_league' ? (teamData.img || null) : null
-            // On s'assure que la position est bien conservée/mise à jour
         };
     });
-
-    console.log('Sending players to parent:', enrichedPlayers); // Debug log
 
     onChange({
       context: {
@@ -107,9 +110,11 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
         date: matchDate
       },
       players: enrichedPlayers,
+      brand,
+      theme,
       type: 'potm'
     });
-  }, [context, category, matchText, matchDate, players, onChange]);
+  }, [context, category, matchText, matchDate, players, brand, theme, onChange]);
 
   // Adapter les positions des joueurs quand la catégorie change
   useEffect(() => {
@@ -171,7 +176,9 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
       'Défenseuse': { masculine: 'Défenseur', feminine: 'Défenseuse' },
       'Milieu': { masculine: 'Milieu', feminine: 'Milieu' },
       'Gardien': { masculine: 'Gardien', feminine: 'Gardienne' },
-      'Gardienne': { masculine: 'Gardien', feminine: 'Gardienne' }
+      'Gardienne': { masculine: 'Gardien', feminine: 'Gardienne' },
+      'Entraîneur': { masculine: 'Entraîneur', feminine: 'Entraîneur' },
+      'Entraîneuse': { masculine: 'Entraîneuse', feminine: 'Entraîneuse' }
     };
     
     const positionData = positions[position];
@@ -181,7 +188,65 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Brand choice & Rubrique */}
+      <div className="flex gap-6 items-start">
+        {/* Brand */}
+        <div className="flex-none w-44">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Brand
+          </label>
+          <div className="flex gap-4 items-center h-12">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name="brand"
+                value="blick"
+                checked={brand === 'blick'}
+                onChange={() => setBrand('blick')}
+                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+              />
+              <span className="text-sm text-gray-700">Blick</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-not-allowed opacity-50 select-none" title="Le module joueur du match n'est pas encore compatible avec la brand PME.">
+              <input
+                type="radio"
+                name="brand"
+                value="pme"
+                checked={brand === 'pme'}
+                onChange={() => setBrand('pme')}
+                disabled
+                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-not-allowed"
+              />
+              <span className="text-sm text-gray-400">Pme</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Rubrique */}
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Rubrique *
+          </label>
+          <select
+            value={theme || ''}
+            onChange={(e) => setTheme(e.target.value || null)}
+            className={`field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!theme ? 'text-gray-400' : 'text-gray-700'
+              }`}
+            required
+          >
+            <option value="" disabled hidden>Sélectionner...</option>
+            <option value="Suisse" className="text-gray-700">Suisse</option>
+            <option value="Inter" className="text-gray-700">Inter</option>
+            <option value="Sport" className="text-gray-700">Sport</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="py-4">
+        <hr className="border-gray-200" />
+      </div>
+
       {/* Section 1: Contexte et Catégorie */}
       <div className="flex gap-4">
         {/* Contexte */}
@@ -192,7 +257,7 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
           <select
             value={context}
             onChange={(e) => handleContextChange(e.target.value)}
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
           >
             {contextsData.map((ctx) => (
               <option key={ctx.type} value={ctx.type}>{ctx.label}</option>
@@ -208,7 +273,7 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
           >
             <option value="Messieurs">Messieurs</option>
             <option value="Dames">Dames</option>
@@ -221,14 +286,14 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
         {/* Label du match */}
         <div className="w-1/2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Label du sondage *
+            Label du match *
           </label>
           <input
             type="text"
             value={matchText}
             onChange={(e) => setMatchText(e.target.value)}
-            placeholder="Ex: France - Suisse"
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="France - Suisse"
+            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             required
           />
         </div>
@@ -242,7 +307,7 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
             type="date"
             value={matchDate}
             onChange={(e) => setMatchDate(e.target.value)}
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
             required
           />
         </div>
@@ -253,87 +318,84 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
         <label className="block text-sm font-medium text-gray-700 mb-3">
           Candidats *
         </label>
-        <div className="bg-gray-50 border border-gray-300 p-4 rounded-md">
-          <div className="space-y-3">
-            {players.map((player, index) => (
-              <div key={index} className="flex items-center gap-2">
-                {/* Nom */}
-                <input
-                  type="text"
-                  value={player.name}
-                  onChange={(e) => handlePlayerChange(index, 'name', e.target.value)}
-                  placeholder="Nom du joueur"
-                  className="field mb-0 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                
-                {/* Position */}
-                <select
-                  value={player.position}
-                  onChange={(e) => handlePlayerChange(index, 'position', e.target.value)}
-                  className="field mb-0 w-32 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Attaquant">{getPositionForCategory('Attaquant', category)}</option>
-                  <option value="Défenseur">{getPositionForCategory('Défenseur', category)}</option>
-                  <option value="Milieu">{getPositionForCategory('Milieu', category)}</option>
-                  <option value="Gardien">{getPositionForCategory('Gardien', category)}</option>
-                </select>
+        <div className="space-y-4">
+          {players.map((player, index) => (
+            <div key={index} className="bg-gray-50 border border-gray-300 rounded-md overflow-hidden shadow-sm">
+              <RepeatableBlockActions
+                index={index}
+                total={players.length}
+                onMoveUp={() => movePlayerUp(index)}
+                onMoveDown={() => movePlayerDown(index)}
+                onRemove={players.length > 2 ? () => removePlayer(index) : null}
+                title={`Candidat ${index + 1}`}
+              />
+              
+              <div className="p-4 bg-white space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Nom */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Nom du joueur <span style={{ display: 'none' }}>#{index + 1}</span> *
+                    </label>
+                    <input
+                      type="text"
+                      value={player.name}
+                      onChange={(e) => handlePlayerChange(index, 'name', e.target.value)}
+                      placeholder="Nom du joueur"
+                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      required
+                    />
+                  </div>
+                  
+                  {/* Position */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Position
+                    </label>
+                    <select
+                      value={player.position}
+                      onChange={(e) => handlePlayerChange(index, 'position', e.target.value)}
+                      className="field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+                    >
+                      <option value="Attaquant">{getPositionForCategory('Attaquant', category)}</option>
+                      <option value="Défenseur">{getPositionForCategory('Défenseur', category)}</option>
+                      <option value="Milieu">{getPositionForCategory('Milieu', category)}</option>
+                      <option value="Gardien">{getPositionForCategory('Gardien', category)}</option>
+                      <option value="Entraîneur">{getPositionForCategory('Entraîneur', category)}</option>
+                      <option value="Entraîneuse">{getPositionForCategory('Entraîneuse', category)}</option>
+                    </select>
+                  </div>
 
-                {/* Team */}
-                <select
-                  value={player.team}
-                  onChange={(e) => handlePlayerChange(index, 'team', e.target.value)}
-                  className="field mb-0 w-32 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {teamsData
-                    .filter(team => team.type === context)
-                    .map((team) => (
-                      <option key={team.name} value={team.name}>{team.name}</option>
-                  ))}
-                </select>
-              {/* Boutons de réordonnancement */}
-              <div className="flex flex-col gap-1">
-                <button
-                  type="button"
-                  onClick={() => movePlayerUp(index)}
-                  disabled={index === 0}
-                  className="h-4 w-8 text-xs text-gray-500 hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
-                  title="Monter"
-                >
-                  ▲
-                </button>
-                <button
-                  type="button"
-                  onClick={() => movePlayerDown(index)}
-                  disabled={index === players.length - 1}
-                  className="h-4 w-8 text-xs text-gray-500 hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
-                  title="Descendre"
-                >
-                  ▼
-                </button>
+                  {/* Team */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Équipe
+                    </label>
+                    <select
+                      value={player.team}
+                      onChange={(e) => handlePlayerChange(index, 'team', e.target.value)}
+                      className="field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+                    >
+                      {teamsData
+                        .filter(team => team.type === context)
+                        .map((team) => (
+                          <option key={team.name} value={team.name}>{team.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
-                {/* Bouton supprimer */}
-                {players.length > 2 && (
-                  <button
-                    type="button"
-                    onClick={() => removePlayer(index)}
-                    className="btn-form btn-delete h-10 w-10 text-xl font-bold text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors flex-shrink-0"
-                    title="Supprimer ce candidat"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={addPlayer}
-            className="text-blick hover:underline text-sm mt-3 font-medium flex items-center"
-          >
-            + Ajouter un candidat
-          </button>
+            </div>
+          ))}
         </div>
+        
+        <button
+          type="button"
+          onClick={addPlayer}
+          className="text-blick hover:underline text-sm mt-4 font-medium flex items-center"
+        >
+          + Ajouter un candidat
+        </button>
         <p className="text-xs text-gray-500 mt-2">
           Il faut au moins 2 candidats.
         </p>

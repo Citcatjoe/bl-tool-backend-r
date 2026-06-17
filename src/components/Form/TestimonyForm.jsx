@@ -2,19 +2,22 @@ import React, { useState, useEffect } from 'react';
 
 function TestimonyForm({ currentEmbed, formMode, onChange }) {
   // État du formulaire
-  const [title, setTitle] = useState('');
   const [contentTitle, setContentTitle] = useState('');
   const [subject, setSubject] = useState('');
   const [question, setQuestion] = useState('');
   const [timeExpires, setTimeExpires] = useState('');
+  // Brand & theme (rubrique)
+  const [brand, setBrand] = useState('blick');
+  const [theme, setTheme] = useState(null);
 
   // Initialisation en mode édition
   useEffect(() => {
     if (formMode === 'edit' && currentEmbed) {
-      setTitle(currentEmbed.title || '');
       setContentTitle(currentEmbed.content?.title || '');
       setSubject(currentEmbed.content?.subject || '');
       setQuestion(currentEmbed.content?.question || '');
+      setBrand(currentEmbed.brand || 'blick');
+      setTheme(currentEmbed.theme || null);
       
       // Conversion du Timestamp Firebase en string datetime-local
       let timeExpiresValue = '';
@@ -55,7 +58,9 @@ function TestimonyForm({ currentEmbed, formMode, onChange }) {
   useEffect(() => {
     onChange({
       type: 'testimony',
-      title,
+      title: contentTitle, // On utilise contentTitle comme titre pour l'affichage dans la liste
+      brand,
+      theme,
       content: {
         title: contentTitle,
         subject,
@@ -63,93 +68,128 @@ function TestimonyForm({ currentEmbed, formMode, onChange }) {
         timeExpires
       }
     });
-  }, [title, contentTitle, subject, question, timeExpires, onChange]);
+  }, [contentTitle, brand, theme, subject, question, timeExpires, onChange]);
 
   return (
-    <form className="space-y-4">
-      {/* Titre de l'élément */}
+    <div className="space-y-6">
+      {/* Brand choice & Rubrique */}
+      <div className="flex gap-6 items-start">
+        {/* Brand */}
+        <div className="flex-none w-44">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Brand
+          </label>
+          <div className="flex gap-4 items-center h-12">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name="brand"
+                value="blick"
+                checked={brand === 'blick'}
+                onChange={() => setBrand('blick')}
+                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+              />
+              <span className="text-sm text-gray-700">Blick</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-not-allowed opacity-50 select-none" title="Le module d'appel à témoignage n'est pas encore compatible avec la brand PME.">
+              <input
+                type="radio"
+                name="brand"
+                value="pme"
+                checked={brand === 'pme'}
+                onChange={() => setBrand('pme')}
+                disabled
+                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-not-allowed"
+              />
+              <span className="text-sm text-gray-400">Pme</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Rubrique */}
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Rubrique *
+          </label>
+          <select
+            value={theme || ''}
+            onChange={(e) => setTheme(e.target.value || null)}
+            className={`field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!theme ? 'text-gray-400' : 'text-gray-700'
+              }`}
+            required
+          >
+            <option value="" disabled hidden>Sélectionner...</option>
+            <option value="Suisse" className="text-gray-700">Suisse</option>
+            <option value="Inter" className="text-gray-700">Inter</option>
+            <option value="Sport" className="text-gray-700">Sport</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="py-2">
+        <hr className="border-gray-200" />
+      </div>
+
+      {/* Titre de l'appel à témoignage */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">
-          Titre de l'élément (uniquement pour affichage de liste) *
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Titre de l'appel à témoignage *
         </label>
         <input
           type="text"
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          placeholder="Appel à témoignage sur..."
+          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          value={contentTitle}
+          onChange={e => setContentTitle(e.target.value)}
+          placeholder="Témoignages sur l'expérience utilisateur..."
           required
         />
       </div>
-        
-      {/* Section contenu */}
+
+      {/* Sujet */}
       <div>
-        <label className='block text-sm font-medium text-gray-700 mb-3'>Contenu de l'élément embed</label>
-            <div className='border border-gray-300 rounded-md p-4 bg-gray-50'>
-
-        
-               
-                <div className='mb-4'>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Titre de l'appel à témoignage *
-                    </label>
-                    <input
-                        type="text"
-                        className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={contentTitle}
-                        onChange={e => setContentTitle(e.target.value)}
-                        placeholder="Ex: Témoignages sur l'expérience utilisateur..."
-                        required
-                    />
-                </div>
-
-                {/* Sujet */}
-                <div className='mb-4'>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Sujet *
-                    </label>
-                    <input
-                        type="text"
-                        className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={subject}
-                        onChange={e => setSubject(e.target.value)}
-                        placeholder="Ex: Retour d'expérience produit"
-                        required
-                    />
-                </div>
-
-                    {/* Question */}
-                <div className='mb-4'>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Question posée *
-                    </label>
-                    <textarea
-                        className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-y"
-                        value={question}
-                        onChange={e => setQuestion(e.target.value)}
-                        placeholder="Ex: Pouvez-vous nous partager votre expérience avec notre produit ? Qu'est-ce qui a le mieux fonctionné pour vous ?"
-                        required
-                    />
-                </div>
-
-                    {/* Date d'expiration */}
-                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Date limite de réponse
-                    </label>
-                    <input
-                        type="datetime-local"
-                        className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={timeExpires}
-                        onChange={e => setTimeExpires(e.target.value)}
-                    />
-                    <p className="text-sm text-gray-500 mt-1">
-                        Optionnel - Définit une date limite pour recevoir les témoignages
-                    </p>
-                </div>
-        </div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Sujet *
+        </label>
+        <input
+          type="text"
+          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          value={subject}
+          onChange={e => setSubject(e.target.value)}
+          placeholder="Retour d'expérience produit"
+          required
+        />
       </div>
-    </form>
+
+      {/* Question */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Question posée *
+        </label>
+        <textarea
+          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-y bg-white"
+          value={question}
+          onChange={e => setQuestion(e.target.value)}
+          placeholder="Pouvez-vous nous partager votre expérience avec notre produit ? Qu'est-ce qui a le mieux fonctionné pour vous ?"
+          required
+        />
+      </div>
+
+      {/* Date d'expiration */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Date limite de réponse
+        </label>
+        <input
+          type="datetime-local"
+          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          value={timeExpires}
+          onChange={e => setTimeExpires(e.target.value)}
+        />
+        <p className="text-sm text-gray-500 mt-1">
+          Optionnel - Définit une date limite pour recevoir les témoignages
+        </p>
+      </div>
+    </div>
   );
 }
 

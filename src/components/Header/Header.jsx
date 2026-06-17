@@ -35,7 +35,7 @@ function Header({ onLogout, typeFilter, onTypeFilterChange, user }) {
   };
 
   return (
-    <header className={`${s.header} bg-white fixed top-0 w-full bg-white border-b -mx-6 z-10`}>
+    <header className={`${s.header} bg-white relative w-full border-b z-30`}>
       <img src={logo} alt="logo blick tools" className="absolute left-4 top-1/2 -translate-y-1/2"/>
       <span className={s.appTitle}>Blick Tools</span>
       {/* <ul id="filter" className="font-blickr flex gap-10 h-full absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center">

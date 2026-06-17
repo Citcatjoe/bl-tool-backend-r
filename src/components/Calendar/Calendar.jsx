@@ -28,9 +28,15 @@ function Calendar({ calendar, docId, showAll, onSeeAllClick }) {
   const sortedDates = [...calendar.dates].sort((a, b) => a.date.localeCompare(b.date));
 
   // Déterminer les éléments à afficher :
-  // - Si `showAll` est vrai, afficher toutes les dates
+  // - Si `showAll` est vrai, nbElemsToShow est 'tous' ou 100, afficher toutes les dates
   // - Sinon, limiter l'affichage au nombre défini dans `calendar.nbElemsToShow`
-  const itemsToDisplay = showAll ? sortedDates : sortedDates.slice(0, calendar.nbElemsToShow);
+  const limit = typeof calendar.nbElemsToShow === 'string' && calendar.nbElemsToShow !== 'tous'
+    ? parseInt(calendar.nbElemsToShow, 10)
+    : calendar.nbElemsToShow;
+
+  const itemsToDisplay = (showAll || limit === 'tous' || limit === 100 || isNaN(limit))
+    ? sortedDates
+    : sortedDates.slice(0, limit);
 
   return (
     <div className="overflow-auto">
@@ -57,8 +63,8 @@ function Calendar({ calendar, docId, showAll, onSeeAllClick }) {
         })}
       </ul>
 
-      {/* Bouton "Tout voir" pour afficher tous les éléments si `showAll` est faux */}
-      {!showAll && (
+      {/* Bouton "Tout voir" pour afficher tous les éléments si `showAll` est faux et qu'on ne montre pas déjà tout */}
+      {!showAll && calendar.nbElemsToShow !== 'tous' && limit !== 100 && sortedDates.length > limit && (
         <span
           id="see-all"
           className="font-i text-sm block w-16 -mt-5 mb-3 opacity-70 cursor-pointer hover:underline float-left"

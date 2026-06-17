@@ -44,6 +44,7 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
     };
   // State pour gérer la visibilité du menu d'actions
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   const menuRef = useRef(null);
 
   // Toggle de la visibilité du menu
@@ -177,6 +178,8 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
     navigator.clipboard.writeText(url)
       .then(() => {
         console.log('URL copiée dans le presse-papier:', url);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
       })
       .catch((err) => {
         console.error('Erreur lors de la copie dans le presse-papier:', err);
@@ -187,6 +190,8 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
     navigator.clipboard.writeText(embed.id)
       .then(() => {
         console.log('ID copié dans le presse-papier:', embed.id);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
       })
       .catch((err) => {
         console.error('Erreur lors de la copie de l\'ID dans le presse-papier:', err);
@@ -224,6 +229,104 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
     };
 
     updateDeletedField();
+  };
+
+  const getPerformanceVal = () => {
+    if (embed.type === 'poll') {
+      return Array.isArray(embed.answerCounters)
+        ? embed.answerCounters.reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
+        : 0;
+    }
+    if (embed.type === 'tinder') {
+      return embed.tinderVotes && typeof embed.tinderVotes === 'object'
+        ? Object.values(embed.tinderVotes).reduce((acc, vote) => acc + (vote.yes || 0) + (vote.no || 0), 0)
+        : 0;
+    }
+    if (embed.type === 'quiz') {
+      return embed.statsGlobal && embed.statsGlobal.scoreDistribution && typeof embed.statsGlobal.scoreDistribution === 'object'
+        ? Object.values(embed.statsGlobal.scoreDistribution).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
+        : 0;
+    }
+    if (embed.type === 'potm') {
+      return embed.totalVotes || 0;
+    }
+    if (embed.type === 'prono') {
+      return (embed.pronoData && embed.pronoData.item1 && embed.pronoData.item2) 
+        ? ((parseInt(embed.pronoData.item1.votes) || 0) + (parseInt(embed.pronoData.item2.votes) || 0) + (parseInt(embed.pronoData.item3?.votes) || 0))
+        : 0;
+    }
+    if (embed.type === 'facts') {
+      return typeof embed.counterReveal === 'number' || (embed.ratingStats && typeof embed.ratingStats === 'object')
+        ? (embed.counterReveal || 0) + 
+          (embed.ratingStats && typeof embed.ratingStats === 'object'
+            ? Object.values(embed.ratingStats).reduce((sum, val) => sum + (Number(val) || 0), 0)
+            : 0)
+        : (embed.factsData?.items && typeof embed.factsData.items === 'object'
+            ? Object.values(embed.factsData.items).reduce((sum, item) => sum + (parseInt(item?.votes) || 0), 0)
+            : 0);
+    }
+    if (embed.type === 'testimony') {
+      return embed.counterMsgSent || 0;
+    }
+    if (embed.type === 'folder') {
+      return Array.isArray(embed.buttons)
+        ? embed.buttons.reduce((acc, button) => acc + (typeof button?.buttonCounterClicks === 'number' ? button.buttonCounterClicks : 0), 0)
+        : 0;
+    }
+    if (embed.type === 'teaser') {
+      return embed.counterClicks || 0;
+    }
+    return null;
+  };
+
+  const getTooltipText = () => {
+    switch (embed.type) {
+      case 'poll':
+        return "Total des votes";
+      case 'tinder':
+        return "Total des votes (Oui + Non)";
+      case 'quiz':
+        return "Nombre de quiz complétés";
+      case 'potm':
+        return "Nombre total de votes";
+      case 'prono':
+        return "Total des pronostics";
+      case 'facts':
+        return "Total des reveals & notes données";
+      case 'testimony':
+        return "Témoignages soumis";
+      case 'folder':
+        return "Clics cumulés sur les boutons";
+      case 'teaser':
+        return "Total des clics sur le teaser";
+      default:
+        return "";
+    }
+  };
+
+  const getFormattedCreationDate = () => {
+    const timestamp = embed.timeCreated;
+    if (!timestamp) return 'n/a';
+    let date;
+    if (typeof timestamp.toDate === 'function') {
+      date = timestamp.toDate();
+    } else if (timestamp instanceof Date) {
+      date = timestamp;
+    } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+      date = new Date(timestamp);
+    } else if (timestamp.seconds !== undefined) {
+      date = new Date(timestamp.seconds * 1000);
+    } else {
+      return 'n/a';
+    }
+    
+    if (isNaN(date.getTime())) return 'n/a';
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    
+    return `${day}/${month}/${year}`;
   };
 
   return (
@@ -274,31 +377,28 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
       </div> */}
       <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
         {/* Affichage de la performance ou du nombre de réponses */}
-        {embed.type === 'poll'
-          ? (Array.isArray(embed.answerCounters)
-              ? embed.answerCounters.reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
-              : 0)
-          : embed.type === 'tinder'
-            ? (embed.tinderVotes && typeof embed.tinderVotes === 'object'
-                ? Object.values(embed.tinderVotes).reduce((acc, vote) => acc + (vote.yes || 0) + (vote.no || 0), 0)
-                : 0)
-          : embed.type === 'quiz'
-            ? (
-                embed.statsGlobal && embed.statsGlobal.scoreDistribution && typeof embed.statsGlobal.scoreDistribution === 'object'
-                  ? Object.values(embed.statsGlobal.scoreDistribution).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
-                  : 0
-              )
-          : embed.type === 'potm'
-            ? (embed.totalVotes || 0)
-            : embed.type === 'prono'
-              ? ((embed.pronoData && embed.pronoData.item1 && embed.pronoData.item2) 
-                  ? ((parseInt(embed.pronoData.item1.votes) || 0) + (parseInt(embed.pronoData.item2.votes) || 0) + (parseInt(embed.pronoData.item3?.votes) || 0))
-                  : 0)
-              : embed.type === 'facts'
-                ? (embed.factsData?.items && typeof embed.factsData.items === 'object'
-                    ? Object.values(embed.factsData.items).reduce((sum, item) => sum + (parseInt(item?.votes) || 0), 0)
-                    : 0)
-                : <span className="text-gray-400">n/a</span>}
+        {(() => {
+          const perf = getPerformanceVal();
+          if (perf === null) {
+            return <span className="text-gray-400">n/a</span>;
+          }
+          const tooltip = getTooltipText();
+          return (
+            <span className="flex items-center relative">
+              {perf}
+              {tooltip && (
+                <span className="tooltip-trigger">
+                  ?
+                  <span className="tooltip-content">{tooltip}</span>
+                </span>
+              )}
+            </span>
+          );
+        })()}
+      </div>
+      <div className="text-sm text-gray-400 px-4 h-full float-left flex items-center w-1/12">
+        {/* Affichage de la date de création */}
+        {getFormattedCreationDate()}
       </div>
 
       {devMode && (
@@ -312,35 +412,10 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
         <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
           {/* Affichage du rapport performance/counterViews */}
           {(() => {
-            // Calcul de la performance selon le type
-            let performance = 0;
-            if (embed.type === 'poll') {
-              performance = Array.isArray(embed.answerCounters)
-                ? embed.answerCounters.reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
-                : 0;
-            } else if (embed.type === 'tinder') {
-              performance = embed.tinderVotes && typeof embed.tinderVotes === 'object'
-                ? Object.values(embed.tinderVotes).reduce((acc, vote) => acc + (vote.yes || 0) + (vote.no || 0), 0)
-                : 0;
-            } else if (embed.type === 'quiz') {
-              performance = embed.statsGlobal && embed.statsGlobal.scoreDistribution && typeof embed.statsGlobal.scoreDistribution === 'object'
-                ? Object.values(embed.statsGlobal.scoreDistribution).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
-                : 0;
-            } else if (embed.type === 'potm') {
-              performance = embed.totalVotes || 0;
-            } else if (embed.type === 'prono') {
-                performance = (embed.pronoData && embed.pronoData.item1 && embed.pronoData.item2) 
-                ? ((parseInt(embed.pronoData.item1.votes) || 0) + (parseInt(embed.pronoData.item2.votes) || 0) + (parseInt(embed.pronoData.draw?.votes) || 0))
-                : 0;
-            } else if (embed.type === 'facts') {
-                performance = (embed.factsData?.items && typeof embed.factsData.items === 'object')
-                    ? Object.values(embed.factsData.items).reduce((sum, item) => sum + (parseInt(item?.votes) || 0), 0)
-                    : 0;
-            } else {
+            const performance = getPerformanceVal();
+            if (performance === null) {
               return <span className="text-gray-400">n/a</span>;
             }
-            
-            // Calcul du rapport
             const counterViews = typeof embed.counterViews === 'number' ? embed.counterViews : 0;
             if (counterViews === 0) {
               return <span className="text-gray-400">n/a</span>;
@@ -352,14 +427,22 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
         </div>
       )}
      
-       <div id="menu-actions" className="absolute right-4 items-center flex justify-center top-1/2 -translate-y-1/2" ref={menuRef}>
-            <button 
-              id="menu-actions-btn" 
-              className="w-8 h-8 rounded-md hover:bg-gray-100"
-              onClick={toggleMenu}
-            >
-                <img src={iconDotsVertical} alt="Actions" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
-            </button>
+            <div id="menu-actions" className="absolute right-4 items-center flex justify-center top-1/2 -translate-y-1/2" ref={menuRef}>
+             <button 
+               id="menu-actions-btn" 
+               className={`w-8 h-8 rounded-md transition-colors duration-300 relative flex items-center justify-center ${
+                 isCopied ? 'text-white' : 'hover:bg-gray-100'
+               }`}
+               style={isCopied ? { backgroundColor: '#22c55e', color: 'white', cursor: 'default' } : {}}
+               onClick={isCopied ? null : toggleMenu}
+               disabled={isCopied}
+             >
+                 {isCopied ? (
+                   <span className="font-bold text-base leading-none text-white select-none">✓</span>
+                 ) : (
+                   <img src={iconDotsVertical} alt="Actions" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                 )}
+             </button>
             <ul 
               id="menu-actions-items" 
               className={`absolute bg-white text-base py-2 bottom-0 w-60 right-12 rounded-xl shadow-lg ${isMenuVisible ? 'isVisible' : ''}`}

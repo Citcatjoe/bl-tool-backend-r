@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ImageUploader from '../ImageUploader';
+import RepeatableBlockActions from './RepeatableBlockActions';
 
 function FolderForm({ currentEmbed, formMode, onChange }) {
   const [folderName, setFolderName] = useState('');
@@ -9,6 +10,8 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
   const [buttons, setButtons] = useState([
     { buttonTxt: '', buttonUrl: '', buttonOpensNewTab: false }
   ]);
+  const [brand, setBrand] = useState('blick');
+  const [theme, setTheme] = useState(null);
 
   // Charger les données existantes en mode édition
   useEffect(() => {
@@ -20,6 +23,8 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
       setFolderLabelColor(currentEmbed.folderLabelColor || 'bg-brand');
       setImg(currentEmbed.img || '');
       setButtons(currentEmbed.buttons || [{ buttonTxt: '', buttonUrl: '', buttonOpensNewTab: false }]);
+      setBrand(currentEmbed.brand || 'blick');
+      setTheme(currentEmbed.theme || null);
     }
   }, [formMode, currentEmbed]);
 
@@ -33,10 +38,12 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
       folderLabel,
       folderLabelColor,
       img,
-      buttons
+      buttons,
+      brand,
+      theme
     };
     onChange(formData);
-  }, [folderName, folderLabel, folderLabelColor, img, buttons, onChange]);
+  }, [folderName, folderLabel, folderLabelColor, img, buttons, brand, theme, onChange]);
 
   // Gestion des boutons
   const addButton = () => {
@@ -59,31 +66,78 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
     setButtons(newButtons);
   };
 
-  const moveButton = (index, direction) => {
+  const moveButtonUp = (index) => {
+    if (index === 0) return;
     const newButtons = [...buttons];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
-    if (targetIndex >= 0 && targetIndex < buttons.length) {
-      [newButtons[index], newButtons[targetIndex]] = [newButtons[targetIndex], newButtons[index]];
-      setButtons(newButtons);
-    }
+    [newButtons[index - 1], newButtons[index]] = [newButtons[index], newButtons[index - 1]];
+    setButtons(newButtons);
+  };
+
+  const moveButtonDown = (index) => {
+    if (index === buttons.length - 1) return;
+    const newButtons = [...buttons];
+    [newButtons[index], newButtons[index + 1]] = [newButtons[index + 1], newButtons[index]];
+    setButtons(newButtons);
   };
 
   return (
-    <div className="space-y-4">
-      {/* Nom du dossier */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Titre du dossier *
-        </label>
-        <textarea
-          value={folderName}
-          onChange={(e) => setFolderName(e.target.value)}
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[115px]"
-          placeholder="Entrez le titre du dossier&#10;Vous pouvez utiliser plusieurs lignes"
-          rows={3}
-          required
-        />
+    <div className="space-y-6">
+      {/* Brand choice & Rubrique */}
+      <div className="flex gap-6 items-start">
+        {/* Brand */}
+        <div className="flex-none w-44">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Brand
+          </label>
+          <div className="flex gap-4 items-center h-12">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name="brand"
+                value="blick"
+                checked={brand === 'blick'}
+                onChange={() => setBrand('blick')}
+                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+              />
+              <span className="text-sm text-gray-700">Blick</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-not-allowed opacity-50 select-none" title="Le module de dossier n'est pas encore compatible avec la brand PME.">
+              <input
+                type="radio"
+                name="brand"
+                value="pme"
+                checked={brand === 'pme'}
+                onChange={() => setBrand('pme')}
+                disabled
+                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-not-allowed"
+              />
+              <span className="text-sm text-gray-400">Pme</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Rubrique */}
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Rubrique *
+          </label>
+          <select
+            value={theme || ''}
+            onChange={(e) => setTheme(e.target.value || null)}
+            className={`field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!theme ? 'text-gray-400' : 'text-gray-700'
+              }`}
+            required
+          >
+            <option value="" disabled hidden>Sélectionner...</option>
+            <option value="Suisse" className="text-gray-700">Suisse</option>
+            <option value="Inter" className="text-gray-700">Inter</option>
+            <option value="Sport" className="text-gray-700">Sport</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="py-4">
+        <hr className="border-gray-200" />
       </div>
 
       {/* Label du dossier */}
@@ -95,8 +149,8 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
           type="text"
           value={folderLabel}
           onChange={(e) => setFolderLabel(e.target.value)}
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Entrez le label du dossier"
+          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          placeholder="Sport"
           required
         />
       </div>
@@ -116,9 +170,9 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
                 value="bg-brand"
                 checked={folderLabelColor === 'bg-brand'}
                 onChange={(e) => setFolderLabelColor(e.target.value)}
-                className="mr-3"
+                className="mr-3 cursor-pointer"
               />
-              <label htmlFor="color-blick" className="flex items-center">
+              <label htmlFor="color-blick" className="flex items-center select-none cursor-pointer">
                 <span className="inline-block w-4 h-4 bg-blick rounded mr-2"></span>
                 Blick (bg-brand)
               </label>
@@ -131,15 +185,30 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
                 value="bg-sport"
                 checked={folderLabelColor === 'bg-sport'}
                 onChange={(e) => setFolderLabelColor(e.target.value)}
-                className="mr-3"
+                className="mr-3 cursor-pointer"
               />
-              <label htmlFor="color-sport" className="flex items-center">
+              <label htmlFor="color-sport" className="flex items-center select-none cursor-pointer">
                 <span className="inline-block w-4 h-4 bg-green-600 rounded mr-2"></span>
                 Sport (bg-sport)
               </label>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Nom du dossier */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Titre du dossier *
+        </label>
+        <textarea
+          value={folderName}
+          onChange={(e) => setFolderName(e.target.value)}
+          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[115px] bg-white"
+          placeholder="Ne manquez aucune information sur les Jeux Olympiques&#10;Vous pouvez utiliser plusieurs lignes"
+          rows={3}
+          required
+        />
       </div>
 
       {/* Image */}
@@ -162,79 +231,62 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
 
         <div className="space-y-4">
           {buttons.map((button, index) => (
-            <div key={index} className="border border-gray-300 rounded-md p-4 bg-gray-50">
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="text-sm font-medium text-gray-700">Bouton {index + 1}</h4>
-                <div className="flex gap-2">
-                  {/* Boutons de déplacement toujours présents, désactivés si inutilisables */}
-                  <button
-                    type="button"
-                    onClick={() => moveButton(index, 'up')}
-                    className="btn-form"
-                    title="Monter"
-                    disabled={index === 0}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveButton(index, 'down')}
-                    className="btn-form"
-                    title="Descendre"
-                    disabled={index === buttons.length - 1}
-                  >
-                    ↓
-                  </button>
-                  {/* Bouton de suppression masqué si un seul bouton */}
-                  {buttons.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeButton(index)}
-                      className="btn-form btn-delete"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              </div>
+            <div key={index} className="bg-gray-50 border border-gray-300 rounded-md overflow-hidden shadow-sm">
+              <RepeatableBlockActions
+                index={index}
+                total={buttons.length}
+                onMoveUp={moveButtonUp}
+                onMoveDown={moveButtonDown}
+                onRemove={buttons.length > 1 ? removeButton : null}
+                title={`Bouton ${index + 1}`}
+              />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Texte du bouton */}
-                <div>
-                  <input
-                    type="text"
-                    value={button.buttonTxt}
-                    onChange={(e) => updateButton(index, 'buttonTxt', e.target.value)}
-                    className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Texte du bouton"
-                    required
-                  />
+              <div className="p-4 bg-white space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Texte du bouton */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Texte du bouton <span style={{ display: 'none' }}>#{index + 1}</span> *
+                    </label>
+                    <input
+                      type="text"
+                      value={button.buttonTxt}
+                      onChange={(e) => updateButton(index, 'buttonTxt', e.target.value)}
+                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      placeholder="Texte du bouton"
+                      required
+                    />
+                  </div>
+
+                  {/* URL du bouton */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Url du bouton <span style={{ display: 'none' }}>#{index + 1}</span> *
+                    </label>
+                    <input
+                      type="url"
+                      value={button.buttonUrl}
+                      onChange={(e) => updateButton(index, 'buttonUrl', e.target.value)}
+                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      placeholder="https://example.com"
+                      required
+                    />
+                  </div>
                 </div>
 
-                {/* URL du bouton */}
-                <div>
-                  <input
-                    type="url"
-                    value={button.buttonUrl}
-                    onChange={(e) => updateButton(index, 'buttonUrl', e.target.value)}
-                    className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="https://example.com"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Ouvrir dans un nouvel onglet */}
-              <div className="mt-3">
-                <label className="flex items-center text-sm text-gray-600">
+                {/* Ouvrir dans un nouvel onglet */}
+                <div className="flex items-center">
                   <input
                     type="checkbox"
+                    id={`buttonOpensNewTab-${index}`}
                     checked={button.buttonOpensNewTab}
                     onChange={(e) => updateButton(index, 'buttonOpensNewTab', e.target.checked)}
-                    className="mr-2"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2 cursor-pointer"
                   />
-                  Ouvrir dans un nouvel onglet
-                </label>
+                  <label htmlFor={`buttonOpensNewTab-${index}`} className="block text-sm text-gray-700 select-none cursor-pointer">
+                    Ouvrir dans un nouvel onglet
+                  </label>
+                </div>
               </div>
             </div>
           ))}
@@ -244,7 +296,7 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
           <button
             type="button"
             onClick={addButton}
-            className="text-blick text-sm mt-3"
+            className="text-blick hover:underline text-sm mt-4 font-medium flex items-center"
           >
             + Ajouter un bouton
           </button>

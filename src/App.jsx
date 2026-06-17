@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'; 
+import { useState, useEffect, useRef } from 'react';
 import './App.scss';
 import LoadingOverlay from './components/LoadingOverlay/LoadingOverlay';
 import BlackOverlay from './components/BlackOverlay/BlackOverlay';
@@ -32,6 +32,7 @@ import PollListItem from './components/PollListItem/PollListItem';
 import CalendarListItem from './components/CalendarListItem/CalendarListItem';
 import ListItem from './components/ListItem/ListItem';
 import Form from './components/Form/Form';
+import Footer from './components/Footer/Footer';
 
 function App() {
     const [docId, setDocId] = useState(null);
@@ -59,7 +60,14 @@ function App() {
     const [embeds, setEmbeds] = useState([]);
     const [searchTerm, setSearchTerm] = useState(''); // State pour la recherche
     const [typeFilter, setTypeFilter] = useState('all'); // State pour le filtre de type ('all', 'poll', 'calendar')
-    
+    const [currentPage, setCurrentPage] = useState(1); // Page courante (1-indexed)
+    const itemsPerPage = 8; // Nombre d'éléments par page
+
+    // Réinitialiser la pagination lors d'un changement de filtre ou d'une recherche
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, typeFilter]);
+
     // States pour la gestion sécurisée du formulaire
     const [formMode, setFormMode] = useState(null); // 'create' | 'edit' | null
     const [formType, setFormType] = useState(null); // 'poll' | 'calendar' | null
@@ -226,7 +234,7 @@ function App() {
         setMenuNewOpen(false);
     };
 
-    
+
 
     const handleEditEmbed = (embed) => {
         setFormMode('edit');
@@ -247,39 +255,43 @@ function App() {
     // Fonction de filtrage des embeds selon le terme de recherche et le type
     const filteredEmbeds = embeds
         .filter(embed => {
+            // 1. Gestion de la corbeille vs éléments actifs
             if (typeFilter === 'deleted') {
-                return embed.deleted === true;
+                if (!embed.deleted) return false;
             } else {
                 if (embed.deleted) return false;
+
+                // 2. Filtrage par type
                 if (typeFilter !== 'all' && embed.type !== typeFilter) {
                     return false;
                 }
-                // Filtre par recherche textuelle
-                if (!searchTerm.trim()) return true;
-                let title = '';
-                if (embed.type === 'poll') {
-                    title = embed.pollTxt;
-                } else if (embed.type === 'calendar') {
-                    title = embed.calName;
-                } else if (embed.type === 'teaser') {
-                    title = embed.teaserTitle || embed.teaserLabel;
-                } else if (embed.type === 'folder') {
-                    title = embed.folderName;
-                } else if (embed.type === 'tinder') {
-                    title = embed.tinderTitle;
-                } else if (embed.type === 'quiz') {
-                    title = embed.title;
-                } else if (embed.type === 'testimony') {
-                    title = embed.title;
-                } else if (embed.type === 'potm') {
-                    title = embed.potmTitle;
-                } else if (embed.type === 'prono') {
-                    title = "Pronostic Express : " + (embed.pronoData?.item1?.name || "?") + " - " + (embed.pronoData?.item2?.name || "?");
-                } else if (embed.type === 'facts') {
-                    title = "Faits marquants de " + (embed.factsData?.rencontre || embed.factsTitle || "");
-                }
-                return title?.toLowerCase().includes(searchTerm.toLowerCase());
             }
+
+            // 3. Filtrage par recherche textuelle (valable pour tous les modes)
+            if (!searchTerm.trim()) return true;
+            let title = '';
+            if (embed.type === 'poll') {
+                title = embed.pollTxt;
+            } else if (embed.type === 'calendar') {
+                title = embed.calName;
+            } else if (embed.type === 'teaser') {
+                title = embed.teaserTitle || embed.teaserLabel;
+            } else if (embed.type === 'folder') {
+                title = embed.folderName;
+            } else if (embed.type === 'tinder') {
+                title = embed.tinderTitle;
+            } else if (embed.type === 'quiz') {
+                title = embed.title;
+            } else if (embed.type === 'testimony') {
+                title = embed.title;
+            } else if (embed.type === 'potm') {
+                title = embed.potmTitle;
+            } else if (embed.type === 'prono') {
+                title = "Pronostic Express : " + (embed.pronoData?.item1?.name || "?") + " - " + (embed.pronoData?.item2?.name || "?");
+            } else if (embed.type === 'facts') {
+                title = "Faits marquants de " + (embed.factsData?.rencontre || embed.factsTitle || "");
+            }
+            return title?.toLowerCase().includes(searchTerm.toLowerCase());
         })
         .sort((a, b) => {
             // Gestion robuste des Timestamps Firebase
@@ -299,7 +311,7 @@ function App() {
             title: embed.pollTxt || embed.calName || embed.teaserTitle || embed.folderName || embed.tinderTitle || embed.title || 'Sans titre',
             author: embed.author || 'Inconnu'
         }));
-        
+
         if (problematicDocs.length > 0) {
             console.warn('🚨 DOCUMENTS SANS timeCreated VALIDE:', problematicDocs);
             console.table(problematicDocs);
@@ -315,39 +327,41 @@ function App() {
     }
 
     return (
-        <div className={`App relative bg-gray px-6 pt-40 overflow-auto`}>
-                
-                <BlackOverlay formVisible={formVisible} onClick={handleCloseForm} />
-                <Header 
-                    onLogout={handleLogout} 
-                    typeFilter={typeFilter} 
-                    onTypeFilterChange={setTypeFilter}
-                    user={user}
-                />
-                
-                <Form 
-                    formVisible={formVisible}
-                    formMode={formMode}
-                    formType={formType}
-                    currentEmbed={currentEmbed}
-                    onClose={handleCloseForm}
-                    onDataChange={handleDataChange}
-                    devMode={devMode}
-                />
-                
+        <div className="App relative bg-gray h-screen flex flex-col overflow-hidden">
+
+            <BlackOverlay formVisible={formVisible} onClick={handleCloseForm} />
+            <Header
+                onLogout={handleLogout}
+                typeFilter={typeFilter}
+                onTypeFilterChange={setTypeFilter}
+                user={user}
+            />
+
+            <Form
+                formVisible={formVisible}
+                formMode={formMode}
+                formType={formType}
+                currentEmbed={currentEmbed}
+                onClose={handleCloseForm}
+                onDataChange={handleDataChange}
+                devMode={devMode}
+            />
+
+            <div className="flex-1 overflow-y-auto px-6 py-8 pt-16">
+
                 {/* <button
                     className="fixed bottom-6 left-6 w-8 h-8 bg-amber-600 z-40"
                     onClick={() => setFormVisible((v) => !v)}
                 >
                     form mode
                 </button> */}
-                <div className="container max-w-5xl mx-auto mb-8 flex">
+                <div className="container max-w-5xl mx-auto mb-8 flex gap-3 items-center">
                     {/* Menu déroulant de filtrage par type */}
                     <select
                         id="type-filter"
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value)}
-                        className={`w-96 h-14 rounded-full border-gray-300 ${typeFilter === 'all' ? 'bg-transparent' : 'bg-white'} border px-4 focus:outline-none focus:ring-0 focus:ring-gray-400 focus:border-gray-400 cursor-pointer mr-3`}
+                        className={`flex-1 h-14 rounded-full border-gray-300 ${typeFilter === 'all' ? 'bg-transparent' : 'bg-white'} border px-4 focus:outline-none focus:ring-0 focus:ring-gray-400 focus:border-gray-400 cursor-pointer`}
                     >
                         <option value="all">Tous les contenus</option>
                         <option value="poll">Sondages</option>
@@ -365,45 +379,63 @@ function App() {
                         )}
                     </select>
 
-                    <div id="searchbar" className="flex w-96 relative">
+                    <div id="searchbar" className="flex-1 relative">
                         <img src={iconManifier} alt="" className="absolute top-1/2 -translate-y-1/2 left-4" />
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className={`w-full h-14 rounded-full border-gray-300 ${searchTerm ? 'bg-white' : 'bg-transparent'} border pl-14 pr-4 focus:outline-none focus:ring-0 focus:ring-gray-400 focus:border-gray-400`}
-                            placeholder="Rechercher..." 
+                            placeholder="Rechercher..."
                         />
                     </div>
 
                     {/* <ul id="refresh-options" className="ml-auto"> */}
-                        {/* <li className="inline float-left">Mode Live</li>
+                    {/* <li className="inline float-left">Mode Live</li>
                         <li className="inline"><button id="btn-refresh">Rafraichir</button></li> */}
 
-                        <div className="ml-auto flex gap-2">
-                            {/* {devMode && (
+                    <div className="ml-auto flex gap-3 flex-shrink-0">
+                        {/* {devMode && (
                                 <div className="mb-4">
                                     <h1>Lectures Firebase: {readCount}</h1>
                                     
                                 </div>
                             )} */}
-                            {/* <button 
+                        {/* <button 
                                 onClick={() => setIsRealTime(!isRealTime)}
                                 className={`px-4 py-2 rounded text-white ${isRealTime ? 'bg-green-500' : 'bg-blue-500'}`}
                             >
                                 {isRealTime ? 'Mode Live ON' : 'Mode Live OFF'}
                             </button> */}
-                            {!isRealTime && (
-                                <button 
-                                    onClick={handleRefresh}
-                                    disabled={isRefreshing}
-                                    className="btn-secondary h-14 px-4 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 flex items-center gap-2 rounded-full"
-                                >
-                                    <img src={iconArrowTurn} alt="" className="mr-1 w-4" />
-                                    {isRefreshing ? 'Rafraîchissement...' : 'Rafraîchir'}
-                                </button>
-                            )}
+                        {!isRealTime && (
+                            <button
+                                onClick={handleRefresh}
+                                disabled={isRefreshing}
+                                className="btn-secondary h-14 px-4 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 flex items-center gap-2 rounded-full"
+                            >
+                                <img src={iconArrowTurn} alt="" className="mr-1 w-4" />
+                                {isRefreshing ? 'Rafraîchissement...' : 'Rafraîchir'}
+                            </button>
+                        )}
+
+                        <div id="menu-new" className="relative z-20" ref={menuNewRef}>
+                            <button id="menu-new-btn" className="menu-new-btn h-14 w-14 rounded-full bg-blick relative" onClick={() => setMenuNewOpen(v => !v)}>
+                                <img src={iconPlusWhite} alt="Icon-add" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                            </button>
+                            <ul id="menu-new-items" className={`absolute bg-white py-2 top-16 w-60 right-0 rounded-xl shadow-lg${menuNewOpen ? ' isVisible' : ''}`}>
+                                <li id="btn-new-poll" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewPoll}>Sondage</li>
+                                <li id="btn-new-calendar" className="hover:bg-gray-200 cursor-pointer  h-12 flex items-center px-4" onClick={handleNewCalendar}>Calendrier</li>
+                                <li id="btn-new-teaser" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewTeaser}>Teaser</li>
+                                <li id="btn-new-folder" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewFolder}>Dossier</li>
+                                <li id="btn-new-tinder" className="hover:bg-gray-200 cursor-pointer  h-12 flex items-center px-4" onClick={handleNewTinder}>Tinder</li>
+                                <li id="btn-new-quiz" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewQuiz}>Quiz</li>
+                                <li id="btn-new-testimony" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewTestimony}>Nouvel appel à Tém.</li>
+                                <li id="btn-new-potm" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewPotm}>Joueur·euse du match</li>
+                                <li id="btn-new-prono" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewProno}>Pronostic</li>
+                                <li id="btn-new-facts" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewFacts}>Faits marquants</li>
+                            </ul>
                         </div>
+                    </div>
                     {/* </ul> */}
                 </div>
 
@@ -415,6 +447,7 @@ function App() {
                             <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-3/12">Auteur</div>
                             {/* <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Vues</div> */}
                             <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Inter.</div>
+                            <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Créé le</div>
                             {devMode && <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Aff.</div>}
                             {devMode && <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Eng.</div>}
                             <div className="text-xs text-gray-600 px-4 h-full float-right flex items-center"></div>
@@ -422,58 +455,52 @@ function App() {
                     </ul>
 
                     <ul id="elems-list" className="w-full">
-                        {filteredEmbeds.map((embed, idx) => (
-                            <ListItem
-                                key={embed.id || idx}
-                                embed={embed}
-                                iconPoll={iconPoll}
-                                iconCalendar={iconCalendar}
-                                iconTeaser={iconTeaser}
-                                iconFolder={iconFolder}
-                                iconTinder={iconTinder}
-                                iconQuiz={iconQuiz}
-                                iconTestimony={iconTestimony}
-                                iconJersey={iconJersey}
-                                iconProno={iconProno}
-                                iconStar={iconStar}
-                                iconDotsVertical={iconDotsVertical}
-                                iconEye={iconEye}
-                                iconCopy={iconCopy}
-                                iconEdit={iconEdit}
-                                iconTrash={iconTrash}
-                                iconDownload={iconDownload}
-                                onEdit={handleEditEmbed}
-                                onDataChange={handleDataChange}
-                                user={user}
-                                devMode={devMode}
-                            />
-                        ))}
+                        {(() => {
+                            const startIndex = (currentPage - 1) * itemsPerPage;
+                            return filteredEmbeds.slice(startIndex, startIndex + itemsPerPage).map((embed, idx) => (
+                                <ListItem
+                                    key={embed.id || idx}
+                                    embed={embed}
+                                    iconPoll={iconPoll}
+                                    iconCalendar={iconCalendar}
+                                    iconTeaser={iconTeaser}
+                                    iconFolder={iconFolder}
+                                    iconTinder={iconTinder}
+                                    iconQuiz={iconQuiz}
+                                    iconTestimony={iconTestimony}
+                                    iconJersey={iconJersey}
+                                    iconProno={iconProno}
+                                    iconStar={iconStar}
+                                    iconDotsVertical={iconDotsVertical}
+                                    iconEye={iconEye}
+                                    iconCopy={iconCopy}
+                                    iconEdit={iconEdit}
+                                    iconTrash={iconTrash}
+                                    iconDownload={iconDownload}
+                                    onEdit={handleEditEmbed}
+                                    onDataChange={handleDataChange}
+                                    user={user}
+                                    devMode={devMode}
+                                />
+                            ));
+                        })()}
                     </ul>
+
                 </div>
 
                 {/* <span id="btn-new" className="fixed cursor-pointer bottom-6 right-6 aspect-square w-16 rounded-full bg-blick shadow-lg">
                     <img src={iconPlusWhite} alt="Icon-add" className="absolute w-5 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </span> */}
 
-                <div id="menu-new" className="fixed bottom-6 right-6 z-10" ref={menuNewRef}>
-                    <button id="menu-new-btn" className="menu-new-btn h-16 w-16 rounded-full bg-blick shadow-lg relative" onClick={() => setMenuNewOpen(v => !v)}>
-                        <img src={iconPlusWhite} alt="Icon-add" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
-                    </button>
-                    <ul id="menu-new-items" className={`absolute bg-white py-2 -top-4 w-60 right-0 rounded-xl shadow-lg${menuNewOpen ? ' isVisible' : ''}`}>
-                        <li id="btn-new-poll" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewPoll}>Sondage</li>
-                        <li id="btn-new-calendar" className="hover:bg-gray-200 cursor-pointer  h-12 flex items-center px-4" onClick={handleNewCalendar}>Calendrier</li>
-                        <li id="btn-new-teaser" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewTeaser}>Teaser</li>
-                        <li id="btn-new-folder" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewFolder}>Dossier</li>
-                        <li id="btn-new-tinder" className="hover:bg-gray-200 cursor-pointer  h-12 flex items-center px-4" onClick={handleNewTinder}>Tinder</li>
-                       <li id="btn-new-quiz" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewQuiz}>Quiz</li>
-                       <li id="btn-new-testimony" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewTestimony}>Nouvel appel à Tém.</li>
-                       <li id="btn-new-potm" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewPotm}>Joueur·euse du match</li>
-                       <li id="btn-new-prono" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewProno}>Pronostic</li>
-                       <li id="btn-new-facts" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewFacts}>Faits marquants</li>
-                    </ul>
-                </div>
+            </div>
+
+            <Footer
+                currentPage={currentPage}
+                totalPages={Math.ceil(filteredEmbeds.length / itemsPerPage)}
+                onPageChange={setCurrentPage}
+            />
             {/* Dashboard ou widgets ici */}
-            
+
         </div>
     );
 }
