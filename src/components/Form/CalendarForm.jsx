@@ -255,7 +255,7 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
                   {/* Libellé (50%) */}
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">
-                      Wording 
+                      Wording <span className="sr-only">de la date {index + 1}</span>
                     </label>
                     <input
                       type="text"
@@ -272,7 +272,7 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
                     {/* Date Début (25%) */}
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">
-                        Start
+                        Start <span className="sr-only">de la date {index + 1}</span>
                       </label>
                       <input
                         type="datetime-local"
@@ -286,7 +286,7 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
                     {/* Date Fin (25%) */}
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">
-                        End {dateItem.showBadge && '*'}
+                        End {dateItem.showBadge && '*'} <span className="sr-only">Fin de la date {index + 1}</span>
                       </label>
                       <input
                         type="datetime-local"
@@ -332,6 +332,7 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
                   {/* Champ URL Live conditionnel */}
                   {dateItem.liveLinkEnabled && (
                     <div>
+                      <label className="sr-only">URL du live de la date {index + 1}</label>
                       <input
                         type="url"
                         value={dateItem.liveLinkUrl}

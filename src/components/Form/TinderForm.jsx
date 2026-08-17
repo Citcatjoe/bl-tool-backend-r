@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import RepeatableBlockActions from './RepeatableBlockActions';
 
+const generateId = () => {
+    return typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+};
+
 function getInitialCard() {
   return {
+    id: generateId(),
     tinderCardLabel: '',
     tinderCardTitle: '',
     tinderCardVotes: {
@@ -13,59 +20,63 @@ function getInitialCard() {
 }
 
 function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
-  const [tinderLabel, setTinderLabel] = useState(currentEmbed?.tinderLabel || '');
-  const [tinderTitle, setTinderTitle] = useState(currentEmbed?.tinderTitle || '');
-  const [brand, setBrand] = useState('blick');
-  const [theme, setTheme] = useState(null);
+  const getEmbedData = () => currentEmbed?.data || currentEmbed || {};
+
+  const [tinderLabel, setTinderLabel] = useState(() => getEmbedData().tinderLabel || '');
+  const [tinderTitle, setTinderTitle] = useState(() => getEmbedData().tinderTitle || '');
+  const [brand, setBrand] = useState(() => currentEmbed?.brand || 'blick');
+  const [theme, setTheme] = useState(() => currentEmbed?.theme || null);
 
   // Initialisation à 3 cartes (création ou édition)
   const getInitialCards = () => {
-    if (currentEmbed?.tinderCards?.length === 3) return currentEmbed.tinderCards;
-    if (currentEmbed?.tinderCards?.length) {
-      // Si moins de 3, compléter
-      const cards = [...currentEmbed.tinderCards];
+    const data = getEmbedData();
+    let cards = [];
+    if (data.tinderCards?.length === 3) cards = data.tinderCards;
+    else if (data.tinderCards?.length) {
+      cards = [...data.tinderCards];
       while (cards.length < 3) cards.push(getInitialCard());
-      return cards;
+    } else {
+      cards = [getInitialCard(), getInitialCard(), getInitialCard()];
     }
-    // Création : 3 cartes vides
-    return [getInitialCard(), getInitialCard(), getInitialCard()];
+    // S'assure que chaque carte possède un UUID robuste
+    return cards.map(c => c.id ? c : { ...c, id: generateId() });
   };
-  const [tinderCards, setTinderCards] = useState(getInitialCards());
+  const [tinderCards, setTinderCards] = useState(() => getInitialCards());
 
-  // Initialiser les votes à la racine
-  const getInitialVotes = () => {
-    if (currentEmbed?.tinderVotes && typeof currentEmbed.tinderVotes === 'object') {
-      // S'assurer que chaque carte a un vote
-      const votes = { ...currentEmbed.tinderVotes };
-      for (let i = 0; i < getInitialCards().length; i++) {
-        if (!votes[i]) votes[i] = { yes: 0, no: 0 };
-      }
-      return votes;
-    }
-    // Générer des votes par défaut
+  // Initialiser les votes basés sur l'ID
+  const getInitialVotes = (cards) => {
+    const sourceVotes = currentEmbed?.stats?.tinderVotes || currentEmbed?.tinderVotes || {};
     const votes = {};
-    for (let i = 0; i < getInitialCards().length; i++) {
-      votes[i] = { yes: 0, no: 0 };
-    }
+    cards.forEach((card, i) => {
+      let cardVotes = { yes: 0, no: 0 };
+      if (sourceVotes[card.id] !== undefined) {
+         cardVotes = sourceVotes[card.id];
+      } else if (sourceVotes[i] !== undefined) {
+         cardVotes = sourceVotes[i];
+      }
+      votes[card.id] = cardVotes;
+    });
     return votes;
   };
-  const [tinderVotes, setTinderVotes] = useState(getInitialVotes());
-  const [legendTxt, setLegendTxt] = useState(currentEmbed?.tinderLegend?.txt || '');
-  const [legendDisplay, setLegendDisplay] = useState(currentEmbed?.tinderLegend?.display ?? false);
+  const [tinderVotes, setTinderVotes] = useState(() => getInitialVotes(tinderCards));
+  const [legendTxt, setLegendTxt] = useState(() => getEmbedData().tinderLegend?.txt || '');
+  const [legendDisplay, setLegendDisplay] = useState(() => getEmbedData().tinderLegend?.display ?? false);
 
-  // Charger les données existantes en mode édition
+  // Charger les données existantes en mode édition (une seule fois par document)
   useEffect(() => {
     if (formMode === 'edit' && currentEmbed) {
-      setTinderLabel(currentEmbed.tinderLabel || '');
-      setTinderTitle(currentEmbed.tinderTitle || '');
-      setTinderCards(currentEmbed.tinderCards || [getInitialCard(), getInitialCard(), getInitialCard()]);
-      setTinderVotes(currentEmbed.tinderVotes || getInitialVotes());
-      setLegendTxt(currentEmbed.tinderLegend?.txt || '');
-      setLegendDisplay(currentEmbed.tinderLegend?.display ?? false);
+      const data = getEmbedData();
+      setTinderLabel(data.tinderLabel || '');
+      setTinderTitle(data.tinderTitle || '');
+      const initialCards = getInitialCards();
+      setTinderCards(initialCards);
+      setTinderVotes(getInitialVotes(initialCards));
+      setLegendTxt(data.tinderLegend?.txt || '');
+      setLegendDisplay(data.tinderLegend?.display ?? false);
       setBrand(currentEmbed.brand || 'blick');
       setTheme(currentEmbed.theme || null);
     }
-  }, [formMode, currentEmbed]);
+  }, [formMode, currentEmbed?.id, currentEmbed?.meta?.id]);
 
   // Mise à jour du parent à chaque changement
   useEffect(() => {
@@ -95,14 +106,7 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
       const newCards = [...tinderCards];
       [newCards[idx - 1], newCards[idx]] = [newCards[idx], newCards[idx - 1]];
       setTinderCards(newCards);
-      // Synchroniser les votes en réindexant
-      const votesArr = Object.values(tinderVotes);
-      [votesArr[idx - 1], votesArr[idx]] = [votesArr[idx], votesArr[idx - 1]];
-      const newVotes = {};
-      for (let i = 0; i < votesArr.length; i++) {
-        newVotes[i] = votesArr[i];
-      }
-      setTinderVotes(newVotes);
+      // Plus besoin de réindexer les votes, ils sont liés à l'ID (c.id)
     }
   };
 
@@ -111,14 +115,7 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
       const newCards = [...tinderCards];
       [newCards[idx], newCards[idx + 1]] = [newCards[idx + 1], newCards[idx]];
       setTinderCards(newCards);
-      // Synchroniser les votes en réindexant
-      const votesArr = Object.values(tinderVotes);
-      [votesArr[idx], votesArr[idx + 1]] = [votesArr[idx + 1], votesArr[idx]];
-      const newVotes = {};
-      for (let i = 0; i < votesArr.length; i++) {
-        newVotes[i] = votesArr[i];
-      }
-      setTinderVotes(newVotes);
+      // Plus besoin de réindexer les votes, ils sont liés à l'ID (c.id)
     }
   };
 
@@ -277,7 +274,7 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
       {/* Légende */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Légende
+          Légende {legendDisplay && '*'}
         </label>
         <input
           id="legendTxt"

@@ -13,27 +13,27 @@ function TestimonyForm({ currentEmbed, formMode, onChange }) {
   // Initialisation en mode édition
   useEffect(() => {
     if (formMode === 'edit' && currentEmbed) {
-      setContentTitle(currentEmbed.content?.title || '');
-      setSubject(currentEmbed.content?.subject || '');
-      setQuestion(currentEmbed.content?.question || '');
+      setContentTitle(currentEmbed.title || '');
+      setSubject(currentEmbed.subject || '');
+      setQuestion(currentEmbed.question || '');
       setBrand(currentEmbed.brand || 'blick');
       setTheme(currentEmbed.theme || null);
       
       // Conversion du Timestamp Firebase en string datetime-local
       let timeExpiresValue = '';
-      if (currentEmbed.content?.timeExpires) {
+      if (currentEmbed.timeExpires) {
         try {
           // Si c'est un Timestamp Firebase, le convertir en Date puis en string datetime-local
           let dateObj;
-          if (currentEmbed.content.timeExpires.toDate) {
+          if (currentEmbed.timeExpires.toDate) {
             // C'est un Timestamp Firebase
-            dateObj = currentEmbed.content.timeExpires.toDate();
-          } else if (currentEmbed.content.timeExpires instanceof Date) {
+            dateObj = currentEmbed.timeExpires.toDate();
+          } else if (currentEmbed.timeExpires instanceof Date) {
             // C'est déjà un objet Date
-            dateObj = currentEmbed.content.timeExpires;
-          } else if (typeof currentEmbed.content.timeExpires === 'string') {
+            dateObj = currentEmbed.timeExpires;
+          } else if (typeof currentEmbed.timeExpires === 'string') {
             // C'est une string, la parser
-            dateObj = new Date(currentEmbed.content.timeExpires);
+            dateObj = new Date(currentEmbed.timeExpires);
           }
           
           if (dateObj && !isNaN(dateObj.getTime())) {
@@ -58,15 +58,12 @@ function TestimonyForm({ currentEmbed, formMode, onChange }) {
   useEffect(() => {
     onChange({
       type: 'testimony',
-      title: contentTitle, // On utilise contentTitle comme titre pour l'affichage dans la liste
+      title: contentTitle, 
       brand,
       theme,
-      content: {
-        title: contentTitle,
-        subject,
-        question,
-        timeExpires
-      }
+      subject,
+      question,
+      timeExpires
     });
   }, [contentTitle, brand, theme, subject, question, timeExpires, onChange]);
 
@@ -133,14 +130,14 @@ function TestimonyForm({ currentEmbed, formMode, onChange }) {
       {/* Titre de l'appel à témoignage */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Titre de l'appel à témoignage *
+          Titre de la box *
         </label>
         <input
           type="text"
           className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           value={contentTitle}
           onChange={e => setContentTitle(e.target.value)}
-          placeholder="Témoignages sur l'expérience utilisateur..."
+          placeholder="Appel à témoignage"
           required
         />
       </div>
@@ -155,7 +152,7 @@ function TestimonyForm({ currentEmbed, formMode, onChange }) {
           className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           value={subject}
           onChange={e => setSubject(e.target.value)}
-          placeholder="Retour d'expérience produit"
+          placeholder="Soirées piégées"
           required
         />
       </div>
@@ -169,7 +166,7 @@ function TestimonyForm({ currentEmbed, formMode, onChange }) {
           className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] resize-y bg-white"
           value={question}
           onChange={e => setQuestion(e.target.value)}
-          placeholder="Pouvez-vous nous partager votre expérience avec notre produit ? Qu'est-ce qui a le mieux fonctionné pour vous ?"
+          placeholder="Avez-vous déjà été victime d'un acte malveillant en soirée?"
           required
         />
       </div>

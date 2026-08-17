@@ -1,13 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import './App.scss';
 import LoadingOverlay from './components/LoadingOverlay/LoadingOverlay';
 import BlackOverlay from './components/BlackOverlay/BlackOverlay';
 import Header from './components/Header/Header';
-import { db } from './services/firebase'; // Importez votre instance Firebase
+import { db } from '@rms/services'; // Importez votre instance Firebase
 import { doc, updateDoc, arrayUnion, increment, getDoc } from 'firebase/firestore'; // Import des fonctions Firestore
 import Login from './components/Login/Login';
+import TeamEditor from './components/TeamEditor/TeamEditor';
+import NewWidgetPicker from './components/NewWidgetPicker/NewWidgetPicker';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
-import { fetchData, listenToEmbeds } from './services/api';
+import { fetchData, listenToEmbeds } from '@rms/services';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import iconManifier from './assets/img/icon-manifier.svg';
 import iconPlusWhite from './assets/img/icon-add.svg';
@@ -41,22 +43,9 @@ function App() {
     const [formVisible, setFormVisible] = useState(false);
     const [loading, setLoading] = useState(true); // Par défaut, l'overlay est visible
     const [user, setUser] = useState(null);
-    const [menuNewOpen, setMenuNewOpen] = useState(false);
-    const menuNewRef = useRef(null);
-    // Fermer le menu #menu-new si on clique à l'extérieur
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (menuNewRef.current && !menuNewRef.current.contains(event.target)) {
-                setMenuNewOpen(false);
-            }
-        };
-        if (menuNewOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [menuNewOpen]);
+    // Modale de choix du type de widget à créer (remplace l'ancien menu « + »)
+    const [newPickerOpen, setNewPickerOpen] = useState(false);
+    const [teamEditorOpen, setTeamEditorOpen] = useState(false);
     const [embeds, setEmbeds] = useState([]);
     const [searchTerm, setSearchTerm] = useState(''); // State pour la recherche
     const [typeFilter, setTypeFilter] = useState('all'); // State pour le filtre de type ('all', 'poll', 'calendar')
@@ -93,12 +82,12 @@ function App() {
             // MODE TEMPS RÉEL
             const unsubscribe = listenToEmbeds((data) => {
                 setEmbeds(data);
-                console.log('Données Firestore embeds (live):', data);
+                console.log('Données Firestore widgets (live):', data);
                 // Compter les lectures en mode dev
                 if (devMode) {
                     setReadCount(prevCount => prevCount + data.length);
                 }
-            });
+            }, 'widgets');
             return () => unsubscribe();
         } else {
             // MODE CHARGEMENT UNIQUE
@@ -109,8 +98,8 @@ function App() {
     // Fonction de chargement unique
     const loadEmbedsOnce = async () => {
         try {
-            const data = await fetchData(devMode);
-            console.log('Données Firestore embeds (once):', data);
+            const data = await fetchData(devMode, 'widgets');
+            console.log('Données Firestore widgets (once):', data);
             setEmbeds(data);
             setReadCount(prevCount => prevCount + data.length);
         } catch (error) {
@@ -154,84 +143,17 @@ function App() {
     };
 
     // Handlers pour la gestion sécurisée du formulaire
-    const handleNewPoll = () => {
+    /**
+     * Ouvre le formulaire de création pour un type de widget donné. Remplace les
+     * 11 anciens `handleNew*` identiques : la modale `NewWidgetPicker` fournit le
+     * `type` depuis le registre `WIDGET_TYPES`.
+     */
+    const openCreate = (type) => {
         setFormMode('create');
-        setFormType('poll');
-        setCurrentEmbed(null); // Pas d'élément existant
-        setFormVisible(true);
-        setMenuNewOpen(false);
-    };
-
-    const handleNewCalendar = () => {
-        setFormMode('create');
-        setFormType('calendar');
+        setFormType(type);
         setCurrentEmbed(null);
         setFormVisible(true);
-        setMenuNewOpen(false);
-    };
-
-    const handleNewTeaser = () => {
-        setFormMode('create');
-        setFormType('teaser');
-        setCurrentEmbed(null);
-        setFormVisible(true);
-        setMenuNewOpen(false);
-    };
-
-    const handleNewFolder = () => {
-        setFormMode('create');
-        setFormType('folder');
-        setCurrentEmbed(null);
-        setFormVisible(true);
-        setMenuNewOpen(false);
-    };
-
-    const handleNewTinder = () => {
-        setFormMode('create');
-        setFormType('tinder');
-        setCurrentEmbed(null);
-        setFormVisible(true);
-        setMenuNewOpen(false);
-    };
-
-    const handleNewQuiz = () => {
-        setFormMode('create');
-        setFormType('quiz');
-        setCurrentEmbed(null);
-        setFormVisible(true);
-        setMenuNewOpen(false);
-    };
-
-    const handleNewTestimony = () => {
-        setFormMode('create');
-        setFormType('testimony');
-        setCurrentEmbed(null);
-        setFormVisible(true);
-        setMenuNewOpen(false);
-    };
-
-    const handleNewPotm = () => {
-        setFormMode('create');
-        setFormType('potm');
-        setCurrentEmbed(null);
-        setFormVisible(true);
-        setMenuNewOpen(false);
-    };
-
-    const handleNewProno = () => {
-        setFormMode('create');
-        setFormType('prono');
-        setCurrentEmbed(null);
-        setFormVisible(true);
-        setMenuNewOpen(false);
-    };
-
-    const handleNewFacts = () => {
-        setFormMode('create');
-        setFormType('facts');
-        setCurrentEmbed(null);
-        setFormVisible(true);
-        setMenuNewOpen(false);
+        setNewPickerOpen(false);
     };
 
 
@@ -255,11 +177,13 @@ function App() {
     // Fonction de filtrage des embeds selon le terme de recherche et le type
     const filteredEmbeds = embeds
         .filter(embed => {
+            const isDeleted = embed.meta?.deleted || false;
+            
             // 1. Gestion de la corbeille vs éléments actifs
             if (typeFilter === 'deleted') {
-                if (!embed.deleted) return false;
+                if (!isDeleted) return false;
             } else {
-                if (embed.deleted) return false;
+                if (isDeleted) return false;
 
                 // 2. Filtrage par type
                 if (typeFilter !== 'all' && embed.type !== typeFilter) {
@@ -269,47 +193,52 @@ function App() {
 
             // 3. Filtrage par recherche textuelle (valable pour tous les modes)
             if (!searchTerm.trim()) return true;
-            let title = '';
-            if (embed.type === 'poll') {
-                title = embed.pollTxt;
-            } else if (embed.type === 'calendar') {
-                title = embed.calName;
-            } else if (embed.type === 'teaser') {
-                title = embed.teaserTitle || embed.teaserLabel;
-            } else if (embed.type === 'folder') {
-                title = embed.folderName;
-            } else if (embed.type === 'tinder') {
-                title = embed.tinderTitle;
-            } else if (embed.type === 'quiz') {
-                title = embed.title;
-            } else if (embed.type === 'testimony') {
-                title = embed.title;
+            
+            let title = embed.meta?.title || embed.data?.question || embed.meta?.label || 'Sans titre';
+            if (embed.type === 'prono') {
+                const pronoData = embed.data?.pronoData || embed.pronoData;
+                if (pronoData?.item1?.name && pronoData?.item2?.name) {
+                    title = `Pronostic : ${pronoData.item1.name} - ${pronoData.item2.name}`;
+                }
             } else if (embed.type === 'potm') {
-                title = embed.potmTitle;
-            } else if (embed.type === 'prono') {
-                title = "Pronostic Express : " + (embed.pronoData?.item1?.name || "?") + " - " + (embed.pronoData?.item2?.name || "?");
-            } else if (embed.type === 'facts') {
-                title = "Faits marquants de " + (embed.factsData?.rencontre || embed.factsTitle || "");
+                const contextText = embed.data?.context?.text || embed.context?.text;
+                if (contextText) {
+                    title = `Joueur.euse du match : ${contextText}`;
+                }
             }
-            return title?.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            return title.toLowerCase().includes(searchTerm.toLowerCase());
         })
         .sort((a, b) => {
             // Gestion robuste des Timestamps Firebase
-            const timeA = a.timeCreated?.seconds || a.timeCreated?.toMillis?.() || 0;
-            const timeB = b.timeCreated?.seconds || b.timeCreated?.toMillis?.() || 0;
+            const timeA = a.meta?.timeCreated?.seconds || a.meta?.timeCreated?.toMillis?.() || 0;
+            const timeB = b.meta?.timeCreated?.seconds || b.meta?.timeCreated?.toMillis?.() || 0;
             return timeB - timeA; // Ordre décroissant (plus récent en premier)
         });
 
     // Identifier les documents sans timeCreated valide
     if (devMode && embeds.length > 0) {
         const problematicDocs = embeds.filter(embed => {
-            const time = embed.timeCreated?.seconds || embed.timeCreated?.toMillis?.() || 0;
+            const time = embed.meta?.timeCreated?.seconds || embed.meta?.timeCreated?.toMillis?.() || 0;
             return time === 0;
         }).map(embed => ({
-            id: embed.id,
+            id: embed.meta?.id || embed.id,
             type: embed.type,
-            title: embed.pollTxt || embed.calName || embed.teaserTitle || embed.folderName || embed.tinderTitle || embed.title || 'Sans titre',
-            author: embed.author || 'Inconnu'
+            title: (() => {
+                if (embed.type === 'prono') {
+                    const pronoData = embed.data?.pronoData || embed.pronoData;
+                    if (pronoData?.item1?.name && pronoData?.item2?.name) {
+                        return `Pronostic : ${pronoData.item1.name} - ${pronoData.item2.name}`;
+                    }
+                } else if (embed.type === 'potm') {
+                    const contextText = embed.data?.context?.text || embed.context?.text;
+                    if (contextText) {
+                        return `Joueur.euse du match : ${contextText}`;
+                    }
+                }
+                return embed.meta?.title || embed.data?.question || 'Sans titre';
+            })(),
+            author: embed.meta?.author || 'Inconnu'
         }));
 
         if (problematicDocs.length > 0) {
@@ -330,11 +259,27 @@ function App() {
         <div className="App relative bg-gray h-screen flex flex-col overflow-hidden">
 
             <BlackOverlay formVisible={formVisible} onClick={handleCloseForm} />
+
+            {/* Choix du type de widget à créer — remplace l'ancien menu « + » */}
+            <NewWidgetPicker
+                isOpen={newPickerOpen}
+                onClose={() => setNewPickerOpen(false)}
+                onPick={openCreate}
+            />
+
+            {/* Édition des catalogues de joueurs — données de référence, hors widgets */}
+            <TeamEditor
+                isOpen={teamEditorOpen}
+                teamId={null}
+                onClose={() => setTeamEditorOpen(false)}
+            />
+
             <Header
                 onLogout={handleLogout}
                 typeFilter={typeFilter}
                 onTypeFilterChange={setTypeFilter}
                 user={user}
+                onEditTeams={() => setTeamEditorOpen(true)}
             />
 
             <Form
@@ -372,6 +317,7 @@ function App() {
                         <option value="quiz">Quiz</option>
                         <option value="testimony">Témoignages</option>
                         <option value="potm">Joueurs/Joueuses du match</option>
+                        <option value="natinotes">Notes des joueur·euse·s</option>
                         <option value="prono">Pronostics</option>
                         <option value="facts">Faits marquants</option>
                         {user?.email === 'cesargreppin@gmail.com' && (
@@ -418,33 +364,25 @@ function App() {
                             </button>
                         )}
 
-                        <div id="menu-new" className="relative z-20" ref={menuNewRef}>
-                            <button id="menu-new-btn" className="menu-new-btn h-14 w-14 rounded-full bg-blick relative" onClick={() => setMenuNewOpen(v => !v)}>
+                        <div id="menu-new" className="relative z-20">
+                            <button id="menu-new-btn" className="menu-new-btn h-14 w-14 rounded-full bg-blick relative" onClick={() => setNewPickerOpen(true)}>
                                 <img src={iconPlusWhite} alt="Icon-add" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                             </button>
-                            <ul id="menu-new-items" className={`absolute bg-white py-2 top-16 w-60 right-0 rounded-xl shadow-lg${menuNewOpen ? ' isVisible' : ''}`}>
-                                <li id="btn-new-poll" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewPoll}>Sondage</li>
-                                <li id="btn-new-calendar" className="hover:bg-gray-200 cursor-pointer  h-12 flex items-center px-4" onClick={handleNewCalendar}>Calendrier</li>
-                                <li id="btn-new-teaser" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewTeaser}>Teaser</li>
-                                <li id="btn-new-folder" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewFolder}>Dossier</li>
-                                <li id="btn-new-tinder" className="hover:bg-gray-200 cursor-pointer  h-12 flex items-center px-4" onClick={handleNewTinder}>Tinder</li>
-                                <li id="btn-new-quiz" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewQuiz}>Quiz</li>
-                                <li id="btn-new-testimony" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewTestimony}>Nouvel appel à Tém.</li>
-                                <li id="btn-new-potm" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewPotm}>Joueur·euse du match</li>
-                                <li id="btn-new-prono" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewProno}>Pronostic</li>
-                                <li id="btn-new-facts" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={handleNewFacts}>Faits marquants</li>
-                            </ul>
                         </div>
                     </div>
                     {/* </ul> */}
+                </div>
+
+                <div className="container max-w-5xl mx-auto mb-2 px-2 text-sm text-gray-500">
+                    {filteredEmbeds.length} widget{filteredEmbeds.length !== 1 ? 's' : ''} trouvé{filteredEmbeds.length !== 1 ? 's' : ''}
                 </div>
 
                 <div className="container max-w-5xl mx-auto mb-8">
                     <ul className="font-i">
                         <li className="h-12 w-full bg-gray-200 rounded-t-lg">
                             <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-4/12">Titre</div>
-                            <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Type</div>
-                            <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-3/12">Auteur</div>
+                            <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-[10%]">Type</div>
+                            <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-[23.33%]">Auteur</div>
                             {/* <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Vues</div> */}
                             <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Inter.</div>
                             <div className="text-xs text-gray-600 px-4 h-full float-left flex items-center w-1/12">Créé le</div>

@@ -10,8 +10,8 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
   const [matchText, setMatchText] = useState('');
   const [matchDate, setMatchDate] = useState('');
   const [players, setPlayers] = useState([
-    { id: Date.now() + '-0', name: '', position: 'Attaquant', team: 'Suisse', votes: 0 },
-    { id: Date.now() + '-1', name: '', position: 'Attaquant', team: 'Suisse', votes: 0 }
+    { id: crypto.randomUUID(), name: '', position: 'Attaquant', team: 'Suisse', votes: 0 },
+    { id: crypto.randomUUID(), name: '', position: 'Attaquant', team: 'Suisse', votes: 0 }
   ]);
   // Brand & theme (rubrique)
   const [brand, setBrand] = useState('blick');
@@ -142,7 +142,7 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
   const addPlayer = () => {
     const defaultPosition = getPositionForCategory('Attaquant', category);
     const defaultTeam = teamsData.find(t => t.type === context)?.name || '';
-    setPlayers([...players, { id: Date.now() + '-' + players.length, name: '', position: defaultPosition, team: defaultTeam, votes: 0 }]);
+    setPlayers([...players, { id: crypto.randomUUID(), name: '', position: defaultPosition, team: defaultTeam, votes: 0 }]);
   };
 
   const removePlayer = (index) => {

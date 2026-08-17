@@ -1,11 +1,11 @@
 import React from 'react';
 
-function RepeatableBlockActions({ index, total, onMoveUp, onMoveDown, onRemove, title }) {
+function RepeatableBlockActions({ index, total, onMoveUp, onMoveDown, onRemove, title, allowRemoveAll = false }) {
   return (
     <div className="flex justify-between items-center bg-gray-200 px-4 h-10 border-b border-gray-300">
-      <div className="font-semibold text-sm text-gray-700 select-none">
+      <h4 className="font-semibold text-sm text-gray-700 select-none m-0">
         {title || `Élément ${index + 1}`}
-      </div>
+      </h4>
       <div className="flex gap-1">
         {onMoveUp && (
           <button
@@ -29,7 +29,7 @@ function RepeatableBlockActions({ index, total, onMoveUp, onMoveDown, onRemove, 
             ▼
           </button>
         )}
-        {total > 1 && onRemove && (
+        {(allowRemoveAll || total > 1) && onRemove && (
           <button
             type="button"
             onClick={() => onRemove(index)}

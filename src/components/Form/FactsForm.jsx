@@ -8,7 +8,7 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
   const [rencontre, setRencontre] = useState('');
   const [date, setDate] = useState('');
   const [items, setItems] = useState([
-    { id: Date.now() + '-0', icon: factsIcons[0]?.id || '', title: "L'action de la soirée", type: 'normal', text: '', votes: 0 }
+    { id: crypto.randomUUID(), icon: factsIcons[0]?.id || '', title: "L'action de la soirée", type: 'normal', text: '', votes: 0 }
   ]);
 
   // Brand & theme (rubrique)
@@ -78,10 +78,8 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
     };
 
     if (hasRating) {
-      // Use existing ratingStats (or legacy voteStats) if available, otherwise initialize
-      update.ratingStats = currentEmbed?.ratingStats || currentEmbed?.voteStats || {
-        "0": 0, "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 0
-      };
+      // Use existing ratingStats (or legacy voteStats) if available, otherwise initialize as empty
+      update.ratingStats = currentEmbed?.ratingStats || currentEmbed?.voteStats || {};
     } else {
       // Explicitly set to null if it existed but the rating item was removed
       if (currentEmbed?.ratingStats || currentEmbed?.voteStats) {
@@ -93,7 +91,7 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
   }, [rencontre, date, items, brand, theme, onChange, currentEmbed]);
 
   const handleAddItem = () => {
-    setItems([...items, { id: Date.now() + '-' + items.length, icon: factsIcons[0]?.id || '', title: "L'action de la soirée", type: 'normal', text: '', votes: 0 }]);
+    setItems([...items, { id: crypto.randomUUID(), icon: factsIcons[0]?.id || '', title: "L'action de la soirée", type: 'normal', text: '', votes: 0 }]);
   };
 
   const handleRemoveItem = (index) => {

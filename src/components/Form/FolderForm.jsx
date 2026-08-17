@@ -8,7 +8,7 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
   const [folderLabelColor, setFolderLabelColor] = useState('bg-brand');
   const [img, setImg] = useState('');
   const [buttons, setButtons] = useState([
-    { buttonTxt: '', buttonUrl: '', buttonOpensNewTab: false }
+    { id: crypto.randomUUID(), buttonTxt: '', buttonUrl: '', buttonOpensNewTab: false }
   ]);
   const [brand, setBrand] = useState('blick');
   const [theme, setTheme] = useState(null);
@@ -22,7 +22,13 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
       setFolderLabel(currentEmbed.folderLabel || '');
       setFolderLabelColor(currentEmbed.folderLabelColor || 'bg-brand');
       setImg(currentEmbed.img || '');
-      setButtons(currentEmbed.buttons || [{ buttonTxt: '', buttonUrl: '', buttonOpensNewTab: false }]);
+      
+      const loadedButtons = (currentEmbed.buttons || [{ buttonTxt: '', buttonUrl: '', buttonOpensNewTab: false }]).map((btn, index) => ({
+        ...btn,
+        id: btn.id || crypto.randomUUID(),
+      }));
+      setButtons(loadedButtons);
+      
       setBrand(currentEmbed.brand || 'blick');
       setTheme(currentEmbed.theme || null);
     }
@@ -48,7 +54,7 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
   // Gestion des boutons
   const addButton = () => {
     if (buttons.length < 4) {
-      setButtons([...buttons, { buttonTxt: '', buttonUrl: '', buttonOpensNewTab: false }]);
+      setButtons([...buttons, { id: crypto.randomUUID(), buttonTxt: '', buttonUrl: '', buttonOpensNewTab: false }]);
     }
   };
 
@@ -217,7 +223,7 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
           type="folder"
           initialUrl={img}
           oldUrl={formMode === 'edit' ? img : ''}
-          label="Image du dossier"
+          label="Image du dossier *"
           disabled={false}
           onUpload={setImg}
         />
@@ -246,7 +252,7 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
                   {/* Texte du bouton */}
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">
-                      Texte du bouton <span style={{ display: 'none' }}>#{index + 1}</span> *
+                      Texte du bouton <span className="sr-only">#{index + 1}</span> *
                     </label>
                     <input
                       type="text"
@@ -261,7 +267,7 @@ function FolderForm({ currentEmbed, formMode, onChange }) {
                   {/* URL du bouton */}
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">
-                      Url du bouton <span style={{ display: 'none' }}>#{index + 1}</span> *
+                      Url du bouton <span className="sr-only">#{index + 1}</span> *
                     </label>
                     <input
                       type="url"

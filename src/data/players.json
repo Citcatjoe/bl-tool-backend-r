@@ -1,0 +1,106 @@
+[
+  {
+    "id": "manuel-akanji",
+    "name": "Manuel Akanji",
+    "team": "Suisse",
+    "sport": "football",
+    "category": "Messieurs",
+    "img": null
+  },
+  {
+    "id": "zeki-amdouni",
+    "name": "Zeki Amdouni",
+    "team": "Suisse",
+    "sport": "football",
+    "category": "Messieurs",
+    "img": null
+  },
+  {
+    "id": "ricardo-rodriguez",
+    "name": "Ricardo Rodriguez",
+    "team": "Suisse",
+    "sport": "football",
+    "category": "Messieurs",
+    "img": null
+  },
+  {
+    "id": "denis-zakaria",
+    "name": "Denis Zakaria",
+    "team": "Suisse",
+    "sport": "football",
+    "category": "Messieurs",
+    "img": null
+  },
+  {
+    "id": "ramona-bachmann",
+    "name": "Ramona Bachmann",
+    "team": "Suisse",
+    "sport": "football",
+    "category": "Dames",
+    "img": null
+  },
+  {
+    "id": "alisha-lehmann",
+    "name": "Alisha Lehmann",
+    "team": "Suisse",
+    "sport": "football",
+    "category": "Dames",
+    "img": null
+  },
+  {
+    "id": "lia-waelti",
+    "name": "Lia Wälti",
+    "team": "Suisse",
+    "sport": "football",
+    "category": "Dames",
+    "img": null
+  },
+  {
+    "id": "kevin-fiala",
+    "name": "Kevin Fiala",
+    "team": "Suisse",
+    "sport": "hockey",
+    "category": "Messieurs",
+    "img": null
+  },
+  {
+    "id": "roman-josi",
+    "name": "Roman Josi",
+    "team": "Suisse",
+    "sport": "hockey",
+    "category": "Messieurs",
+    "img": null
+  },
+  {
+    "id": "nino-niederreiter",
+    "name": "Nino Niederreiter",
+    "team": "Suisse",
+    "sport": "hockey",
+    "category": "Messieurs",
+    "img": null
+  },
+  {
+    "id": "andrea-braendli",
+    "name": "Andrea Brändli",
+    "team": "Suisse",
+    "sport": "hockey",
+    "category": "Dames",
+    "img": null
+  },
+  {
+    "id": "alina-mueller",
+    "name": "Alina Müller",
+    "team": "Suisse",
+    "sport": "hockey",
+    "category": "Dames",
+    "img": null
+  },
+  {
+    "id": "lara-stalder",
+    "name": "Lara Stalder",
+    "team": "Suisse",
+    "sport": "hockey",
+    "category": "Dames",
+    "img": null
+  }
+]

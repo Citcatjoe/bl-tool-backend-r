@@ -68,6 +68,11 @@ body
     color: #E2271B;
 }
 
+.bg-blick
+{
+    background-color: #E2271B;
+}
+
 
 // STATES
 
@@ -310,6 +315,28 @@ body
       border-style: solid;
       border-color: rgba(31, 41, 55, 0.95) transparent transparent transparent;
     }
+  }
+
+  /* Variante ancrée à gauche : la bulle part du déclencheur et s'étend vers
+     la droite. Évite qu'un « ? » proche du bord gauche d'un conteneur à
+     overflow (modale du formulaire) ne fasse déborder — donc couper — la
+     bulle. Additive : n'affecte pas le `.tooltip-content` par défaut. */
+  .tooltip-content.tooltip-left {
+    left: 0;
+    transform: translate(0, 0);
+    white-space: normal;
+    width: max-content;
+    max-width: 240px;
+    text-align: left;
+
+    &::after {
+      left: 6px;
+      transform: none;
+    }
+  }
+
+  &:hover .tooltip-content.tooltip-left {
+    transform: translate(0, -8px);
   }
 }
 

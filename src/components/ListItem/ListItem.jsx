@@ -1,7 +1,10 @@
 import s from './ListItem.module.scss';
 import { doc, updateDoc, collection, getDocs } from 'firebase/firestore';
-import { db } from '../../services/firebase'; // Assurez-vous que le chemin d'importation de db est correct
+import { db } from '@rms/services'; // Assurez-vous que le chemin d'importation de db est correct
 import { useState, useRef, useEffect } from 'react';
+import ConfirmModal from '../ConfirmModal/ConfirmModal';
+import TypeBadge from '../TypeBadge';
+import { WIDGET_TYPES } from '../../data/widgetTypes';
 
 function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconTinder, iconQuiz, iconTestimony, iconJersey, iconProno, iconStar, iconDotsVertical, iconEye, iconCopy, iconEdit, iconTrash, iconDownload, onEdit, onDataChange, user, devMode }) {
   // Handler pour la modification de la structure d'un poll
@@ -29,22 +32,24 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
   //   }
   // };
     // Suppression définitive du document Firestore
-    const handleDeleteForReal = async () => {
-      if (!window.confirm('Supprimer pour de vrai ? Cette action est IRRÉVERSIBLE !')) return;
-      try {
-        const docRef = doc(db, 'embeds', embed.id);
-        await docRef.delete ? docRef.delete() : await import('firebase/firestore').then(({ deleteDoc }) => deleteDoc(docRef));
-        console.log('Document supprimé pour de vrai:', embed.id);
-        alert('Document supprimé définitivement !');
-        if (onDataChange) onDataChange();
-      } catch (error) {
-        console.error('Erreur lors de la suppression définitive:', error);
-        alert('Erreur lors de la suppression définitive. Veuillez réessayer.');
-      }
-    };
+  const performDeleteForReal = async () => {
+    try {
+      const docRef = doc(db, 'widgets', embed.id || embed.meta?.id);
+      await docRef.delete ? docRef.delete() : await import('firebase/firestore').then(({ deleteDoc }) => deleteDoc(docRef));
+      console.log('Document supprimé pour de vrai:', embed.id);
+      if (onDataChange) onDataChange();
+      setDeleteModalConfig({ isOpen: false, type: null });
+    } catch (error) {
+      console.error('Erreur lors de la suppression définitive:', error);
+      alert('Erreur lors de la suppression définitive. Veuillez réessayer.');
+      setDeleteModalConfig({ isOpen: false, type: null });
+    }
+  };
+
   // State pour gérer la visibilité du menu d'actions
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [deleteModalConfig, setDeleteModalConfig] = useState({ isOpen: false, type: null });
   const menuRef = useRef(null);
 
   // Toggle de la visibilité du menu
@@ -76,7 +81,7 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
     
     try {
       // Récupérer tous les documents de la sous-collection 'messages'
-      const messagesRef = collection(db, 'embeds', embed.id, 'messages');
+      const messagesRef = collection(db, 'widgets', embed.id || embed.meta?.id, 'messages');
       const messagesSnapshot = await getDocs(messagesRef);
       
       if (messagesSnapshot.empty) {
@@ -101,14 +106,13 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
       // Trier par date (plus récent en premier)
       messages.sort((a, b) => b.timeSent - a.timeSent);
       
-      // Formater en texte
-      let textContent = `Messages du témoignage: ${embed.title || 'Sans titre'}\n`;
-      textContent += `Nombre de messages: ${messages.length}\n`;
-      textContent += `Exporté le: ${new Date().toLocaleDateString('fr-FR')}\n\n`;
-      textContent += '='.repeat(50) + '\n\n';
-      
+      const safeTitle = (embed.meta?.title || 'testimony').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      let textContent = `Messages du témoignage: ${embed.meta?.title || 'Sans titre'}\n`;
+      textContent += `Total de messages reçus: ${messages.length}\n`;
+      textContent += `Date de l'export: ${new Date().toLocaleString('fr-CH')}\n`;
+      textContent += `=================================================\n\n`;
+
       messages.forEach((message, index) => {
-        // Numéroter de manière chronologique (message 1 = le plus ancien)
         const messageNumber = messages.length - index;
         textContent += `Message ${messageNumber}\n`;
         textContent += `Date: ${message.timeSent.toLocaleDateString('fr-FR')} à ${message.timeSent.toLocaleTimeString('fr-FR')}\n`;
@@ -117,13 +121,12 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
         textContent += `Message:\n${message.text}\n\n`;
         textContent += '-'.repeat(30) + '\n\n';
       });
-      
-      // Créer et télécharger le fichier
+
       const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `messages_${embed.title || 'testimony'}_${new Date().toISOString().split('T')[0]}.txt`;
+      link.download = `messages_${safeTitle}_${new Date().toISOString().split('T')[0]}.txt`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -150,31 +153,19 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
   };
 
   const handleCopy = () => {
-    let url = '';
-    if (embed.type === 'calendar') {
-      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-calendar/?calendarDoc=${embed.id}`;
-    } else if (embed.type === 'poll') {
+    const type = embed.type || 'unknown';
+    
+    // Base URL facilement modifiable si l'arborescence FTP (monorepo) évolue
+    // On conserve l'ancienne arborescence (Option A) pour ne rien casser
+    const baseUrl = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-${type}/`;
+    let url = `${baseUrl}?${type}Doc=${embed.id}`;
+    
+    // Cas spécifique pour le widget poll
+    if (type === 'poll') {
       const brandParam = embed.brand || 'blick';
-      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-poll/?pollDoc=${embed.id}&brand=${brandParam}`;
-    } else if (embed.type === 'teaser') {
-      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-teaser/?teaserDoc=${embed.id}`;
-    } else if (embed.type === 'folder') {
-      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-folder/?folderDoc=${embed.id}`;
-     } else if (embed.type === 'tinder') {
-      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-tinder/?tinderDoc=${embed.id}`; 
-    } else if (embed.type === 'quiz') {
-      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-quiz/?quizDoc=${embed.id}`; 
-    } else if (embed.type === 'testimony') {
-      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-testimony/?testimonyDoc=${embed.id}`; 
-    } else if (embed.type === 'potm') {
-      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-potm/?potmDoc=${embed.id}`; 
-    } else if (embed.type === 'prono') {
-      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-prono/?pronoDoc=${embed.id}`;
-    } else if (embed.type === 'facts') {
-      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-facts/?factsDoc=${embed.id}`;
-    } else {
-      url = embed.id; // fallback
+      url += `&brand=${brandParam}`;
     }
+
     navigator.clipboard.writeText(url)
       .then(() => {
         console.log('URL copiée dans le presse-papier:', url);
@@ -205,76 +196,105 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
       onEdit(embed);
     }
   };
-  const handleDelete = () => {
-    // Demander confirmation avant suppression
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ?\n\nCette action ne peut pas être annulée.')) {
-      return; // Annulation par l'utilisateur
-    }
-
+  const performDelete = async () => {
     console.log('Suppression demandée pour', embed.id);
-    const updateDeletedField = async () => {
-        try {
-            const docRef = doc(db, 'embeds', embed.id);
-            await updateDoc(docRef, { deleted: true });
-            console.log('Champ "deleted" mis à TRUE pour', embed.id);
-            
-            // Déclencher un rafraîchissement des données si en mode non temps réel
-            if (onDataChange) {
-              onDataChange();
-            }
-        } catch (error) {
-            console.error('Erreur lors de la mise à jour du champ "deleted":', error);
-            alert('Erreur lors de la suppression. Veuillez réessayer.');
+    try {
+        const docRef = doc(db, 'widgets', embed.id || embed.meta?.id);
+        await updateDoc(docRef, { 'meta.deleted': true });
+        console.log('Champ "deleted" mis à TRUE pour', embed.id);
+        
+        if (onDataChange) {
+          onDataChange();
         }
-    };
+        setDeleteModalConfig({ isOpen: false, type: null });
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour du champ "deleted":', error);
+        alert('Erreur lors de la suppression. Veuillez réessayer.');
+        setDeleteModalConfig({ isOpen: false, type: null });
+    }
+  };
 
-    updateDeletedField();
+  const handleDeleteClick = () => {
+    setIsMenuVisible(false);
+    setDeleteModalConfig({ isOpen: true, type: 'soft' });
+  };
+
+  const handleDeleteForRealClick = () => {
+    setIsMenuVisible(false);
+    setDeleteModalConfig({ isOpen: true, type: 'hard' });
   };
 
   const getPerformanceVal = () => {
+    const data = embed.data || embed;
+    const stats = embed.stats || embed;
+
     if (embed.type === 'poll') {
-      return Array.isArray(embed.answerCounters)
-        ? embed.answerCounters.reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
-        : 0;
+      if (!stats.answerCounters) return 0;
+      return Array.isArray(stats.answerCounters)
+        ? stats.answerCounters.reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
+        : Object.values(stats.answerCounters).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
     }
     if (embed.type === 'tinder') {
-      return embed.tinderVotes && typeof embed.tinderVotes === 'object'
-        ? Object.values(embed.tinderVotes).reduce((acc, vote) => acc + (vote.yes || 0) + (vote.no || 0), 0)
+      return stats.tinderVotes && typeof stats.tinderVotes === 'object'
+        ? Object.values(stats.tinderVotes).reduce((acc, vote) => acc + (vote.yes || 0) + (vote.no || 0), 0)
         : 0;
     }
     if (embed.type === 'quiz') {
-      return embed.statsGlobal && embed.statsGlobal.scoreDistribution && typeof embed.statsGlobal.scoreDistribution === 'object'
-        ? Object.values(embed.statsGlobal.scoreDistribution).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
+      return stats.statsGlobal && stats.statsGlobal.scoreDistribution && typeof stats.statsGlobal.scoreDistribution === 'object'
+        ? Object.values(stats.statsGlobal.scoreDistribution).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0)
         : 0;
     }
     if (embed.type === 'potm') {
-      return embed.totalVotes || 0;
+      if (stats.playersVotes) {
+        return Object.values(stats.playersVotes).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+      }
+      return stats.totalVotes || 0;
+    }
+    if (embed.type === 'natinotes') {
+      // Somme de toutes les notes déposées, tous joueurs et toutes valeurs confondus
+      if (stats.playerRatings) {
+        return Object.values(stats.playerRatings).reduce(
+          (acc, distribution) => acc + Object.values(distribution || {}).reduce(
+            (sum, count) => sum + (typeof count === 'number' ? count : 0), 0
+          ), 0
+        );
+      }
+      return 0;
     }
     if (embed.type === 'prono') {
-      return (embed.pronoData && embed.pronoData.item1 && embed.pronoData.item2) 
-        ? ((parseInt(embed.pronoData.item1.votes) || 0) + (parseInt(embed.pronoData.item2.votes) || 0) + (parseInt(embed.pronoData.item3?.votes) || 0))
+      if (stats.itemVotes) {
+        return Object.values(stats.itemVotes).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+      }
+      return (data.pronoData && data.pronoData.item1 && data.pronoData.item2) 
+        ? ((parseInt(data.pronoData.item1.votes) || 0) + (parseInt(data.pronoData.item2.votes) || 0) + (parseInt(data.pronoData.item3?.votes) || 0))
         : 0;
     }
     if (embed.type === 'facts') {
-      return typeof embed.counterReveal === 'number' || (embed.ratingStats && typeof embed.ratingStats === 'object')
-        ? (embed.counterReveal || 0) + 
-          (embed.ratingStats && typeof embed.ratingStats === 'object'
-            ? Object.values(embed.ratingStats).reduce((sum, val) => sum + (Number(val) || 0), 0)
-            : 0)
-        : (embed.factsData?.items && typeof embed.factsData.items === 'object'
-            ? Object.values(embed.factsData.items).reduce((sum, item) => sum + (parseInt(item?.votes) || 0), 0)
-            : 0);
+      const ratingStatsObj = stats.ratingStats || embed.ratingStats || {};
+      const ratingSum = Object.values(ratingStatsObj).reduce((sum, val) => sum + (Number(val) || 0), 0);
+      
+      const itemCountersObj = stats.itemCounters || {};
+      const itemsSum = Object.values(itemCountersObj).reduce((sum, item) => sum + (Number(item?.votes) || 0), 0);
+
+      const legacyItemsSum = data.factsData?.items && typeof data.factsData.items === 'object'
+          ? Object.values(data.factsData.items).reduce((sum, item) => sum + (parseInt(item?.votes) || 0), 0)
+          : 0;
+
+      return (stats.reveal || 0) + ratingSum + itemsSum + legacyItemsSum;
     }
     if (embed.type === 'testimony') {
-      return embed.counterMsgSent || 0;
+      return stats.msgSent || embed.counterMsgSent || 0;
     }
     if (embed.type === 'folder') {
-      return Array.isArray(embed.buttons)
-        ? embed.buttons.reduce((acc, button) => acc + (typeof button?.buttonCounterClicks === 'number' ? button.buttonCounterClicks : 0), 0)
+      if (stats.buttonClicks) {
+        return Object.values(stats.buttonClicks).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+      }
+      return Array.isArray(data.buttons)
+        ? data.buttons.reduce((acc, button) => acc + (typeof button?.buttonCounterClicks === 'number' ? button.buttonCounterClicks : 0), 0)
         : 0;
     }
     if (embed.type === 'teaser') {
-      return embed.counterClicks || 0;
+      return stats.clicks || embed.counterClicks || 0;
     }
     return null;
   };
@@ -289,6 +309,8 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
         return "Nombre de quiz complétés";
       case 'potm':
         return "Nombre total de votes";
+      case 'natinotes':
+        return "Nombre total de notes données";
       case 'prono':
         return "Total des pronostics";
       case 'facts':
@@ -305,7 +327,7 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
   };
 
   const getFormattedCreationDate = () => {
-    const timestamp = embed.timeCreated;
+    const timestamp = embed.meta?.timeCreated || embed.timeCreated;
     if (!timestamp) return 'n/a';
     let date;
     if (typeof timestamp.toDate === 'function') {
@@ -332,45 +354,26 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
   return (
     <li className={`elem-list-item relative h-20 w-full bg-white border-b`}>
       <div className="font-blickb elem-title text-sm text-gray-600 px-4 h-full float-left flex items-center w-4/12">
-        {/* Affichage du contenu de la colonne "titre" */}
-        {embed.type === 'poll'
-          ? (embed.pollTxt || 'Titre')
-          : embed.type === 'calendar'
-            ? (embed.calName || 'Titre')
-            : embed.type === 'teaser'
-              ? ((embed.teaserTitle || embed.teaserLabel || 'Titre').replace(/\\n/g, ' '))
-              : embed.type === 'folder'
-                ? ((embed.folderName || 'Dossier').replace(/\\n/g, ' '))
-                : embed.type === 'tinder'
-                  ? (embed.tinderTitle || 'Tinder')
-                  : embed.type === 'quiz'
-                    ? (embed.title || 'Quiz')
-                    : embed.type === 'testimony'
-                      ? (embed.title || 'Témoignage')
-                        : embed.type === 'potm'
-                          ? ('Joueur·euse du match' + (embed.context?.text ? (' (' + embed.context.text + ')') : ''))
-                          : embed.type === 'prono'
-                            ? ("Pronostic Express : " + (embed.pronoData?.item1?.name || "?") + " - " + (embed.pronoData?.item2?.name || "?"))
-                            : embed.type === 'facts'
-                              ? ("Faits marquants de " + (embed.factsData?.rencontre || embed.factsTitle || '') + (embed.factsData?.date ? " (" + (typeof embed.factsData.date === 'string' ? embed.factsData.date.substring(0, 10).split('-').reverse().join('.') : typeof embed.factsData.date?.toDate === 'function' ? embed.factsData.date.toDate().toLocaleDateString('fr-CH') : "") + ")" : ""))
-                              : 'Titre'} 
+        {embed.meta?.title || 'Sans titre'}
       </div>
-      <div className="icon-container text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
-        {/* Affichage de l'icône en fonction du type d'embed */}
-        {embed.type === 'poll' && <img src={iconPoll} alt="poll" />}
-        {embed.type === 'calendar' && <img src={iconCalendar} alt="calendar" />}
-        {embed.type === 'teaser' && <img src={iconTeaser} alt="teaser" />}
-        {embed.type === 'folder' && <img src={iconFolder} alt="folder" />}
-        {embed.type === 'tinder' && <img src={iconTinder} alt="tinder" />}
-        {embed.type === 'quiz' && <img src={iconQuiz} alt="quiz" />}
-        {embed.type === 'testimony' && <img src={iconTestimony} alt="testimony" />}
-        {embed.type === 'potm' && <img src={iconJersey} alt="potm" />}
-        {embed.type === 'prono' && <img src={iconProno} alt="prono" />}
-        {embed.type === 'facts' && <img src={iconStar} alt="facts" />}
+      <div className="icon-container flex items-center w-[10%] px-4 h-full float-left">
+        {(() => {
+          // Libellé humain et couleur viennent du registre partagé (widgetTypes) ;
+          // le badge lui-même est le composant réutilisé par la modale de création.
+          const label = WIDGET_TYPES.find((w) => w.type === embed.type)?.label || 'Inconnu';
+          return (
+            <span className="relative group flex items-center cursor-help">
+              <TypeBadge type={embed.type} />
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 bg-gray-900/95 backdrop-blur text-white text-[11px] px-2.5 py-1.5 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-[999] shadow-lg border border-white/10 pointer-events-none">
+                {label}
+              </span>
+            </span>
+          );
+        })()}
       </div>
-      <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-3/12">
+      <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-[23.33%]">
         {/* Affichage de l'auteur */}
-        {embed.author || 'Auteur inconnu'}
+        {embed.meta?.author || embed.author || 'Auteur inconnu'}
       </div>
       {/* <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
           {typeof embed.counterViews === 'number' ? embed.counterViews : 0}
@@ -404,7 +407,7 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
       {devMode && (
         <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
           {/* Affichage du nombre de vues */}
-          {typeof embed.counterViews === 'number' ? embed.counterViews : 0}
+          {typeof embed.stats?.views === 'number' ? embed.stats.views : (typeof embed.counterViews === 'number' ? embed.counterViews : 0)}
         </div>
       )}
 
@@ -416,7 +419,7 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
             if (performance === null) {
               return <span className="text-gray-400">n/a</span>;
             }
-            const counterViews = typeof embed.counterViews === 'number' ? embed.counterViews : 0;
+            const counterViews = typeof embed.stats?.views === 'number' ? embed.stats.views : (typeof embed.counterViews === 'number' ? embed.counterViews : 0);
             if (counterViews === 0) {
               return <span className="text-gray-400">n/a</span>;
             }
@@ -506,10 +509,7 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
                 </li>
                 <li 
                   className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4"
-                  onClick={() => {
-                    handleDelete();
-                    setIsMenuVisible(false);
-                  }}
+                  onClick={handleDeleteClick}
                 >
                   <img src={iconTrash} alt="" className="mr-5 w-5 h-5" />
                   Supprimer
@@ -517,10 +517,7 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
                 {user?.email === 'cesargreppin@gmail.com' && (
                   <li 
                     className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4"
-                    onClick={() => {
-                      handleDeleteForReal();
-                      setIsMenuVisible(false);
-                    }}
+                    onClick={handleDeleteForRealClick}
                   >
                     <img src={iconTrash} alt="" className="mr-5 w-5 h-5" />
                     Supprimer pour de vrai
@@ -538,6 +535,22 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
                 </li> */}
             </ul>
         </div>
+      <ConfirmModal 
+        isOpen={deleteModalConfig.isOpen && deleteModalConfig.type === 'soft'}
+        title="Confirmer la suppression"
+        message="Êtes-vous sûr de vouloir supprimer cet élément ? Cette action va déplacer l'élément dans la corbeille."
+        onConfirm={performDelete}
+        onCancel={() => setDeleteModalConfig({ isOpen: false, type: null })}
+        isDestructive={true}
+      />
+      <ConfirmModal 
+        isOpen={deleteModalConfig.isOpen && deleteModalConfig.type === 'hard'}
+        title="Suppression définitive"
+        message="Supprimer pour de vrai ? Cette action est IRRÉVERSIBLE !"
+        onConfirm={performDeleteForReal}
+        onCancel={() => setDeleteModalConfig({ isOpen: false, type: null })}
+        isDestructive={true}
+      />
     </li>
   );
 }

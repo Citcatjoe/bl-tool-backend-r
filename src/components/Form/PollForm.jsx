@@ -5,8 +5,8 @@ function PollForm({ currentEmbed, formMode, onChange }) {
   // States pour les champs du sondage
   const [pollTxt, setPollTxt] = useState('');
   const [answers, setAnswers] = useState([
-    { id: 'initial-0', text: '', votes: 0, originalText: '' },
-    { id: 'initial-1', text: '', votes: 0, originalText: '' }
+    { id: crypto.randomUUID(), text: '', votes: 0, originalText: '' },
+    { id: crypto.randomUUID(), text: '', votes: 0, originalText: '' }
   ]);
   const [brand, setBrand] = useState('blick');
   const [theme, setTheme] = useState(null);
@@ -19,17 +19,33 @@ function PollForm({ currentEmbed, formMode, onChange }) {
       setTheme(currentEmbed.theme || null);
 
       if (Array.isArray(currentEmbed.answerTxts)) {
-        const loadedAnswers = currentEmbed.answerTxts.map((txt, index) => ({
-          id: `loaded-${index}-${Date.now()}`,
-          text: txt || '',
-          votes: Array.isArray(currentEmbed.answerCounters) ? (currentEmbed.answerCounters[index] || 0) : 0,
-          originalText: txt || ''
-        }));
+        const loadedAnswers = currentEmbed.answerTxts.map((ans, index) => {
+          // Backward compatibility for strings vs objects
+          const isObj = typeof ans === 'object' && ans !== null;
+          const txt = isObj ? ans.text : ans;
+          const id = isObj && ans.id ? ans.id : crypto.randomUUID();
+          
+          let votes = 0;
+          if (currentEmbed.answerCounters) {
+             if (Array.isArray(currentEmbed.answerCounters)) {
+                votes = currentEmbed.answerCounters[index] || 0;
+             } else {
+                votes = currentEmbed.answerCounters[id] || 0;
+             }
+          }
+
+          return {
+            id,
+            text: txt || '',
+            votes: votes,
+            originalText: txt || ''
+          };
+        });
         setAnswers(loadedAnswers);
       } else {
         setAnswers([
-          { id: 'initial-0', text: '', votes: 0 },
-          { id: 'initial-1', text: '', votes: 0 }
+          { id: crypto.randomUUID(), text: '', votes: 0 },
+          { id: crypto.randomUUID(), text: '', votes: 0 }
         ]);
       }
     }
@@ -37,14 +53,16 @@ function PollForm({ currentEmbed, formMode, onChange }) {
 
   // Notification des changements au parent
   useEffect(() => {
-    const txts = answers.map(a => a.text);
-    const counters = answers.map(a => a.votes);
-    const originalTxts = answers.map(a => a.originalText || '');
+    const formattedAnswers = answers.map(a => ({ id: a.id, text: a.text }));
+    const countersMap = answers.reduce((acc, a) => {
+      acc[a.id] = a.votes;
+      return acc;
+    }, {});
+    
     onChange({
       pollTxt,
-      answerTxts: txts,
-      answerCounters: counters,
-      answerOriginalTxts: originalTxts,
+      answerTxts: formattedAnswers,
+      answerCounters: countersMap,
       brand,
       theme,
       type: 'poll'
@@ -79,7 +97,7 @@ function PollForm({ currentEmbed, formMode, onChange }) {
   };
 
   const addAnswer = () => {
-    const newId = Date.now() + '-' + answers.length;
+    const newId = crypto.randomUUID();
     setAnswers([...answers, { id: newId, text: '', votes: 0, originalText: '' }]);
   };
 

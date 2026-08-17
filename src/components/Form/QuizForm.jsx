@@ -8,8 +8,7 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
 
   // Titre du quiz
   const [title, setTitle] = useState('');
-  // Image du quiz
-  const [img, setImg] = useState('');
+
   // Brand & theme
   const [brand, setBrand] = useState('blick');
   const [theme, setTheme] = useState(null);
@@ -39,7 +38,7 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
   useEffect(() => {
     if (formMode === 'edit' && currentEmbed) {
       setTitle(currentEmbed.title || '');
-      setImg(currentEmbed.img || '');
+
       setBrand(currentEmbed.brand || 'blick');
       setTheme(currentEmbed.theme || null);
 
@@ -54,6 +53,7 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
       const loadedQuestions =
         currentEmbed.questions && Array.isArray(currentEmbed.questions)
           ? currentEmbed.questions.map(q => ({
+              id: q.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9)),
               text: q.text || '',
               hint: q.hint || '',
               img: q.img || '',
@@ -69,6 +69,7 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
             }))
           : [
               {
+                id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
                 text: '',
                 hint: '',
                 img: '',
@@ -110,14 +111,15 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
 
   // Remonter la donnée au parent
   useEffect(() => {
-    onChange({ type: 'quiz', title, img, questions, statsQuestions, conclusion, brand, theme });
-  }, [title, img, questions, statsQuestions, conclusion, brand, theme, onChange]);
+    onChange({ type: 'quiz', title, questions, statsQuestions, conclusion, brand, theme });
+  }, [title, questions, statsQuestions, conclusion, brand, theme, onChange]);
 
   // Ajout d'une question
   const addQuestion = () => {
     setQuestions(prev => [
       ...prev,
       {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
         text: '',
         hint: '',
         img: '',
@@ -245,18 +247,6 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
           onChange={e => setTitle(e.target.value)}
           placeholder="Connaissez-vous les chanteurs suisses les plus célèbres ?"
           required
-        />
-      </div>
-
-      {/* Image du quiz */}
-      <div>
-        <ImageUploader
-          type="quiz"
-          initialUrl={img}
-          oldUrl={formMode === 'edit' ? img : ''}
-          label="Image de couverture du quiz"
-          disabled={false}
-          onUpload={setImg}
         />
       </div>
 

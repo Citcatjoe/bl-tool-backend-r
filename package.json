@@ -1,5 +1,5 @@
 {
-  "name": "bl-tool-calendar-r",
+  "name": "bl-tool-backend-r",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -16,7 +16,9 @@
     "html2canvas": "^1.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-quill-new": "^3.8.3"
+    "react-quill-new": "^3.8.3",
+    "@rms/ui": "*",
+    "@rms/services": "*"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

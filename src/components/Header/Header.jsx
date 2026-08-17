@@ -3,7 +3,7 @@ import s from './Header.module.scss';
 import logo from '../../assets/img/blick-tools-logo.svg';
 import iconUser from '../../assets/img/icon-user.svg';
 
-function Header({ onLogout, typeFilter, onTypeFilterChange, user }) {
+function Header({ onLogout, user, onEditTeams }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuUserRef = useRef(null);
 
@@ -22,17 +22,9 @@ function Header({ onLogout, typeFilter, onTypeFilterChange, user }) {
     };
   }, [menuOpen]);
 
-  // Handler pour les changements de filtre
-  // const handleFilterClick = (filterType) => {
-  //   onTypeFilterChange(filterType);
-  // };
-
-  // Fonction pour déterminer les classes CSS selon l'état actif
-  const getFilterClasses = (filterType) => {
-    return typeFilter === filterType 
-      ? "font-blickb underline decoration-2 cursor-pointer"
-      : "cursor-pointer hover:font-blickb";
-  };
+  // Filtres par type désactivés (bloc <ul id="filter"> commenté plus bas) :
+  // handleFilterClick / getFilterClasses avaient été retirés pour garder le
+  // lint propre. À restaurer avec le bloc si le filtre revient un jour.
 
   return (
     <header className={`${s.header} bg-white relative w-full border-b z-30`}>
@@ -105,6 +97,16 @@ function Header({ onLogout, typeFilter, onTypeFilterChange, user }) {
           </li>
         )}
       </ul> */}
+      {/* Éditer les effectifs — données de référence, à gauche du profil */}
+      <button
+        id="edit-teams-btn"
+        type="button"
+        onClick={onEditTeams}
+        className="text-blick hover:underline cursor-pointer absolute top-1/2 right-24 -translate-y-1/2 text-sm font-medium whitespace-nowrap"
+      >
+        Éditer les effectifs
+      </button>
+
   <div id="menu-user" className="absolute top-0 right-0 h-full aspect-square" ref={menuUserRef}>
         <button
           id="menu-user-btn"

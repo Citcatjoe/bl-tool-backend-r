@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import s from './Form.module.scss';
 import PollForm from './PollForm';
 import CalendarForm from './CalendarForm';
@@ -10,8 +10,10 @@ import TestimonyForm from './TestimonyForm';
 import PotmForm from './PotmForm';
 import PronoForm from './PronoForm';
 import FactsForm from './FactsForm';
-import { collection, addDoc, updateDoc, doc, serverTimestamp, runTransaction, Timestamp } from 'firebase/firestore';
-import { db } from '../../services/firebase';
+import NatinotesForm from './NatinotesForm';
+import { normalizeFocal } from '../../data/portraitFocal';
+import { collection, addDoc, updateDoc, doc, serverTimestamp, runTransaction, Timestamp, getDoc } from 'firebase/firestore';
+import { db } from '@rms/services';
 import { getAuth } from 'firebase/auth';
 
 function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataChange, devMode }) {
@@ -19,7 +21,47 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
-  
+
+  // Adaptateur pour transformer la structure 'widgets' en structure flat legacy
+  const getLegacyEmbed = (embed) => {
+    if (!embed) return null;
+    if (!embed.meta && !embed.data && !embed.stats) return embed;
+    return {
+      ...embed,
+      ...embed.meta,
+      ...embed.stats,
+      ...embed.data,
+      pollTxt: embed.data?.question || embed.data?.title || embed.meta?.title || embed.pollTxt,
+      calWording: embed.data?.title || embed.meta?.title || embed.calWording,
+      folderName: embed.data?.folderName || embed.data?.title || embed.meta?.title || embed.folderName,
+      folderLabel: embed.data?.folderLabel || embed.data?.label || embed.meta?.label || embed.folderLabel,
+      tinderTitle: embed.data?.tinderTitle || embed.data?.title || embed.meta?.title || embed.tinderTitle,
+      tinderLabel: embed.data?.tinderLabel || embed.data?.label || embed.meta?.label || embed.tinderLabel,
+      teaserTitle: embed.data?.title || embed.meta?.title || embed.teaserTitle,
+      teaserLabel: embed.data?.label || embed.meta?.label || embed.teaserLabel,
+      rencontre: embed.data?.title || embed.meta?.title || embed.rencontre,
+      title: embed.data?.title || embed.meta?.title || embed.title,
+      potmTitle: embed.data?.title || embed.meta?.title || embed.potmTitle,
+      // `?? true` : les widgets natinotes publiés avant ce réglage gardent le récap
+      showRecap: embed.data?.showRecap ?? embed.showRecap ?? true,
+      playerRatings: embed.stats?.playerRatings || embed.playerRatings || {},
+      counterViews: embed.stats?.views ?? embed.counterViews ?? 0,
+      counterReveal: embed.stats?.reveal ?? embed.counterReveal ?? 0,
+      counterClicks: embed.stats?.clicks ?? embed.counterClicks ?? 0,
+      counterSeeAllClicks: embed.stats?.seeAllClicks ?? embed.counterSeeAllClicks ?? 0,
+      counterMsgSent: embed.stats?.msgSent ?? embed.counterMsgSent ?? 0,
+      id: embed.meta?.id || embed.id,
+      _originalStats: embed.stats || {},
+      factsData: embed.data?.factsData || embed.factsData || {
+          rencontre: embed.data?.title || embed.meta?.title || embed.rencontre || '',
+          date: embed.data?.date || embed.date || '',
+          items: embed.data?.items || embed.items || []
+      },
+    };
+  };
+
+  const legacyEmbed = useMemo(() => getLegacyEmbed(currentEmbed), [currentEmbed]);
+
   // Déterminer le titre selon le mode et le type
   const getFormTitle = () => {
     if (formMode === 'create') {
@@ -33,6 +75,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
       if (formType === 'potm') return 'Nouveau·elle joueur·euse du match';
       if (formType === 'prono') return 'Nouveau pronostic';
       if (formType === 'facts') return 'Nouveaux faits marquants';
+      if (formType === 'natinotes') return 'Nouvelles notes des joueur·euse·s';
     } else if (formMode === 'edit') {
       if (formType === 'poll') return 'Éditer le sondage';
       if (formType === 'calendar') return 'Éditer le calendrier';
@@ -44,6 +87,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
       if (formType === 'potm') return 'Éditer le/la joueur·euse du match';
       if (formType === 'prono') return 'Éditer le pronostic';
       if (formType === 'facts') return 'Éditer les faits marquants';
+      if (formType === 'natinotes') return 'Éditer les notes des joueur·euse·s';
     }
     return 'Formulaire';
   };
@@ -69,6 +113,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
   const handleSave = async () => {
     setErrorMessage('');
     setIsSuccess(false);
+    console.log("DEBUG legacyEmbed.counterViews:", legacyEmbed?.counterViews, "legacyEmbed.counterSeeAllClicks:", legacyEmbed?.counterSeeAllClicks);
 
     // Effacer toutes les surbrillances rouges existantes dans le DOM
     const formElement = document.getElementById('form');
@@ -83,17 +128,20 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
       });
     }
 
-    const triggerValidationError = (labelText, inputSelector = 'input, textarea, select') => {
+    const triggerValidationError = (labelText, inputSelector = 'input, textarea, select', occurrence = 0) => {
       setIsLoading(false);
-      
+
       if (!formElement || !labelText) return;
 
-      // Recherche du label par son texte
-      const labels = Array.from(formElement.querySelectorAll('label, h3, h4'));
-      const targetLabel = labels.find(label => {
+      // Recherche du label par son texte. `occurrence` sélectionne le N-ième
+      // label correspondant : indispensable quand plusieurs items partagent le
+      // même intitulé (ex. « Note Blick » / « Paragraphe » d'un joueur natinotes),
+      // pour surligner celui qui bloque réellement et non le premier de la liste.
+      const matching = Array.from(formElement.querySelectorAll('label, h3, h4')).filter(label => {
         const text = label.textContent.toLowerCase();
         return text.includes(labelText.toLowerCase());
       });
+      const targetLabel = matching[occurrence] || matching[0];
 
       if (targetLabel) {
         // Appliquer la couleur rouge au label
@@ -101,14 +149,22 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         targetLabel.classList.add('text-red-600', 'font-bold');
         
         // Appliquer la bordure rouge au champ de saisie associé
-        const parentDiv = targetLabel.closest('div');
-        if (parentDiv) {
-          const input = parentDiv.querySelector(inputSelector);
-          if (input) {
-            input.classList.remove('border-gray-300', 'focus:ring-blue-500');
-            input.classList.add('border-red-500', 'focus:ring-red-500');
-            input.focus();
+        let containerElement = targetLabel.parentElement;
+        let input = containerElement ? containerElement.querySelector(inputSelector) : null;
+        
+        // Remonter dans l'arbre DOM jusqu'à trouver un conteneur qui possède l'input
+        // On limite la recherche au formulaire pour éviter de remonter trop haut
+        while (containerElement && !input && containerElement !== formElement) {
+          containerElement = containerElement.parentElement;
+          if (containerElement) {
+            input = containerElement.querySelector(inputSelector);
           }
+        }
+
+        if (input) {
+          input.classList.remove('border-gray-300', 'focus:ring-blue-500');
+          input.classList.add('border-red-500', 'focus:ring-red-500');
+          input.focus();
         }
         
         // Défilement fluide vers le label problématique
@@ -131,6 +187,24 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
       }
 
       let saveData = {};
+      
+      // Récupérer les données les plus récentes de Firestore si on est en mode édition
+      // Cela évite d'écraser les compteurs avec des données "stale" si la liste n'a pas été rafraîchie
+      let latestStats = {};
+      if (formMode === 'edit') {
+        try {
+          const targetId = currentEmbed?.meta?.id || currentEmbed?.id;
+          if (targetId) {
+            const docRef = doc(db, 'widgets', targetId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              latestStats = docSnap.data().stats || {};
+            }
+          }
+        } catch (err) {
+          console.error("Erreur lors de la récupération des stats à jour:", err);
+        }
+      }
 
       // Construction des données selon le type
       if (formData.type === 'poll') {
@@ -148,22 +222,20 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           return;
         }
 
-        // Vérifier que les réponses ne sont pas vides
-        const validTxts = formData.answerTxts.filter(txt => txt && txt.trim() !== '');
-        if (validTxts.length < 2) {
-          triggerValidationError('Réponses possibles');
+        // Vérifier qu'AUCUNE des réponses présentes n'est vide
+        const firstEmptyIndex = formData.answerTxts.findIndex(ans => !ans.text || ans.text.trim() === '');
+        if (firstEmptyIndex !== -1) {
+          triggerValidationError(`Réponse ${firstEmptyIndex + 1}`);
           return;
         }
 
         // Filtrer les compteurs en fonction des réponses valides
         const filteredTxts = [];
-        const filteredCounters = [];
-        const filteredOriginalTxts = [];
-        formData.answerTxts.forEach((txt, i) => {
-          if (txt && txt.trim() !== '') {
-            filteredTxts.push(txt.trim());
-            filteredCounters.push(formData.answerCounters[i] ?? 0);
-            filteredOriginalTxts.push(formData.answerOriginalTxts?.[i] ?? '');
+        const filteredCounters = {};
+        formData.answerTxts.forEach((ans) => {
+          if (ans.text && ans.text.trim() !== '') {
+            filteredTxts.push({ id: ans.id, text: ans.text.trim() });
+            filteredCounters[ans.id] = formData.answerCounters[ans.id] || 0;
           }
         });
 
@@ -174,12 +246,12 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           answerCounters: filteredCounters,
           brand: formData.brand || 'blick',
           theme: formData.theme,
-          timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
+          timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
           timeUpdated: serverTimestamp()
         };
 
         if (formMode === 'edit') {
-          saveData.answerOriginalTxts = filteredOriginalTxts;
+          saveData._originalStats = latestStats;
         }
 
         // L'auteur et le champ deleted ne sont définis que lors de la création
@@ -205,22 +277,33 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         // Vérifier que toutes les dates ont un texte et une date de début
         // Et si showBadge est true, une date de fin est requise
-        const hasInvalidDates = formData.dates.some(date => {
-          if (!date.text || !date.date) return true;
-          if (date.showBadge && !date.endDate) return true;
-          return false;
-        });
-
-        if (hasInvalidDates) {
-          triggerValidationError('Dates');
-          return;
-        }
-
-        // Vérifier que si liveLinkEnabled est true, liveLinkUrl est rempli
-        const hasInvalidLiveLinks = formData.dates.some(date => date.liveLinkEnabled && (!date.liveLinkUrl || date.liveLinkUrl.trim() === ''));
-        if (hasInvalidLiveLinks) {
-          triggerValidationError('Dates');
-          return;
+        for (let i = 0; i < formData.dates.length; i++) {
+          const date = formData.dates[i];
+          if (!date.text || date.text.trim() === '') {
+            triggerValidationError(`Wording de la date ${i + 1}`);
+            return;
+          }
+          if (!date.date) {
+            triggerValidationError(`Start de la date ${i + 1}`);
+            return;
+          }
+          if (date.showBadge) {
+            if (!date.endDate) {
+              triggerValidationError(`Fin de la date ${i + 1}`);
+              return;
+            }
+            if (new Date(date.endDate) <= new Date(date.date)) {
+              triggerValidationError(`Fin de la date ${i + 1}`);
+              // Optionnel: On pourrait aussi afficher un message d'erreur spécifique pour indiquer pourquoi c'est invalide, 
+              // mais pour rester cohérent avec la fonction triggerValidationError qui met en surbrillance, 
+              // mettre en surbrillance la date de fin est la meilleure approche.
+              return;
+            }
+          }
+          if (date.liveLinkEnabled && (!date.liveLinkUrl || date.liveLinkUrl.trim() === '')) {
+            triggerValidationError(`URL du live de la date ${i + 1}`);
+            return;
+          }
         }
 
         // Vérifier que linkGlobalTxt et linkGlobalHref sont mutuellement inclusifs
@@ -272,12 +355,16 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           linkGlobalNewTab: formData.linkGlobalNewTab || false,
           brand: formData.brand || 'blick',
           theme: formData.theme,
-          timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
+          timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
           timeUpdated: serverTimestamp(),
-          counterSeeAllClicks: formMode === 'create' ? 0 : (currentEmbed?.counterSeeAllClicks || 0),
-          counterViews: formMode === 'create' ? 0 : (currentEmbed?.counterViews || 0),
+          counterSeeAllClicks: formMode === 'create' ? 0 : ((latestStats.seeAllClicks ?? legacyEmbed?.counterSeeAllClicks) || 0),
+          counterViews: formMode === 'create' ? 0 : ((latestStats.views ?? legacyEmbed?.counterViews) || 0),
         };
         
+        if (formMode === 'edit') {
+          saveData._originalStats = latestStats;
+        }
+
         // L'auteur et le champ deleted ne sont définis que lors de la création
         if (formMode === 'create') {
           saveData.author = currentUser.email;
@@ -321,7 +408,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           img: formData.img || '',
           brand: formData.brand || 'blick',
           theme: formData.theme,
-          timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
+          timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
           timeUpdated: serverTimestamp()
         };
         
@@ -339,42 +426,42 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           triggerValidationError('Rubrique');
           return;
         }
-        if (!formData.folderName) {
-          triggerValidationError('Nom du dossier');
-          return;
-        }
         if (!formData.folderLabel) {
           triggerValidationError('Label du dossier');
           return;
         }
+        if (!formData.folderName) {
+          triggerValidationError('Titre du dossier');
+          return;
+        }
+        
+        if (!formData.img || formData.img.trim() === '') {
+          triggerValidationError('Image du dossier');
+          return;
+        }
 
-        // Vérifier qu'il y a au moins un bouton avec texte et URL
+        // Vérifier que chaque bouton présent est entièrement rempli
         if (!formData.buttons || formData.buttons.length === 0) {
           triggerValidationError('Texte du bouton #1');
           return;
         }
 
-        // Vérifier les erreurs de champs incomplets (texte renseigné mais pas URL, ou inversement)
         for (let i = 0; i < formData.buttons.length; i++) {
           const btn = formData.buttons[i];
           const hasTxt = btn.buttonTxt && btn.buttonTxt.trim() !== '';
           const hasUrl = btn.buttonUrl && btn.buttonUrl.trim() !== '';
           
-          if (hasTxt && !hasUrl) {
-            triggerValidationError(`Url du bouton #${i + 1}`);
+          if (!hasTxt) {
+            triggerValidationError(`Texte du bouton #${i + 1}`);
             return;
           }
-          if (!hasTxt && hasUrl) {
-            triggerValidationError(`Texte du bouton #${i + 1}`);
+          if (!hasUrl) {
+            triggerValidationError(`Url du bouton #${i + 1}`);
             return;
           }
         }
 
-        const validButtons = formData.buttons.filter(button => button.buttonTxt && button.buttonTxt.trim() !== '' && button.buttonUrl && button.buttonUrl.trim() !== '');
-        if (validButtons.length === 0) {
-          triggerValidationError('Texte du bouton #1');
-          return;
-        }
+        const validButtons = formData.buttons; // Tous les boutons sont valides à ce stade
 
         saveData = {
           type: 'folder',
@@ -383,14 +470,15 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           folderLabelColor: formData.folderLabelColor || 'bg-brand',
           img: formData.img || '',
           buttons: validButtons.map(button => ({
+            id: button.id || crypto.randomUUID(),
             buttonTxt: button.buttonTxt.trim(),
             buttonUrl: button.buttonUrl.trim(),
             buttonOpensNewTab: button.buttonOpensNewTab || false,
-            buttonCounterClicks: 0
+            buttonCounterClicks: button.buttonCounterClicks || 0
           })),
           brand: formData.brand || 'blick',
           theme: formData.theme,
-          timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
+          timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
           timeUpdated: serverTimestamp()
         };
         
@@ -438,12 +526,18 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         }
         // Légende
         const legend = formData.tinderLegend || { txt: '', display: true };
+        
+        if (legend.display && (!legend.txt || legend.txt.trim() === '')) {
+          triggerValidationError('Légende');
+          return;
+        }
 
         saveData = {
           type: 'tinder',
           tinderLabel: formData.tinderLabel,
           tinderTitle: formData.tinderTitle,
           tinderCards: formData.tinderCards.map(card => ({
+            id: card.id,
             tinderCardLabel: card.tinderCardLabel,
             tinderCardTitle: card.tinderCardTitle
           })),
@@ -455,7 +549,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           brand: formData.brand || 'blick',
           theme: formData.theme,
           counterViews: formMode === 'create' ? 0 : (formData.counterViews ?? 0),
-          timeCreated: formMode === 'create' ? serverTimestamp() : currentEmbed.timeCreated,
+          timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
           timeUpdated: serverTimestamp()
         };
         if (formMode === 'create') {
@@ -542,7 +636,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           }
         } else if (formMode === 'edit') {
           // Récupérer l'existant
-          const prevScoreDist = currentEmbed?.statsGlobal?.scoreDistribution || {};
+          const prevScoreDist = legacyEmbed?.statsGlobal?.scoreDistribution || {};
           // Synchroniser toutes les clés de 0 à n
           scoreDistribution = { ...prevScoreDist };
           // Ajout des clés manquantes
@@ -557,9 +651,15 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             .filter(k => k < 0 || k > n)
             .forEach(k => { delete scoreDistribution[k]; });
 
-          // Préserver statsQuestions si le nombre de questions n'a pas changé
-          if (currentEmbed?.statsQuestions && Array.isArray(currentEmbed.statsQuestions) && currentEmbed.statsQuestions.length === n) {
-            statsQuestionsToSave = currentEmbed.statsQuestions;
+          // Préserver statsQuestions si le nombre de questions n'a pas changé, ou si c'est la nouvelle structure (objet)
+          if (legacyEmbed?.statsQuestions) {
+            if (Array.isArray(legacyEmbed.statsQuestions)) {
+              if (legacyEmbed.statsQuestions.length === n) {
+                statsQuestionsToSave = legacyEmbed.statsQuestions;
+              }
+            } else if (typeof legacyEmbed.statsQuestions === 'object') {
+              statsQuestionsToSave = legacyEmbed.statsQuestions;
+            }
           }
         }
         saveData = {
@@ -573,11 +673,11 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           conclusion,
           brand: formData.brand || 'blick',
           theme: formData.theme,
+          timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
         };
         if (formMode === 'create') {
           saveData.author = currentUser.email;
           saveData.deleted = false;
-          saveData.timeCreated = serverTimestamp();
         }
         // Toujours mettre à jour timeUpdated
         saveData.timeUpdated = serverTimestamp();
@@ -588,27 +688,27 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           return;
         }
 
-        if (!formData.content || !formData.content.title || formData.content.title.trim() === '') {
-          triggerValidationError("Titre de l'appel à témoignage");
+        if (!formData.title || formData.title.trim() === '') {
+          triggerValidationError("Titre de la box");
           return;
         }
 
-        if (!formData.content.subject || formData.content.subject.trim() === '') {
+        if (!formData.subject || formData.subject.trim() === '') {
           triggerValidationError('Sujet');
           return;
         }
 
-        if (!formData.content.question || formData.content.question.trim() === '') {
+        if (!formData.question || formData.question.trim() === '') {
           triggerValidationError('Question');
           return;
         }
 
         // Conversion de timeExpires en Timestamp Firebase si défini
         let timeExpiresTimestamp = null;
-        if (formData.content.timeExpires && formData.content.timeExpires.trim() !== '') {
+        if (formData.timeExpires && formData.timeExpires.trim() !== '') {
           try {
             // Convertir la string datetime-local en Date puis en Timestamp Firebase
-            const dateObj = new Date(formData.content.timeExpires);
+            const dateObj = new Date(formData.timeExpires);
             if (!isNaN(dateObj.getTime())) {
               timeExpiresTimestamp = Timestamp.fromDate(dateObj);
             }
@@ -622,18 +722,15 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           title: formData.title.trim(),
           brand: formData.brand || 'blick',
           theme: formData.theme,
-          content: {
-            title: formData.content.title.trim(),
-            subject: formData.content.subject.trim(),
-            question: formData.content.question.trim(),
-            timeExpires: timeExpiresTimestamp
-          }
+          subject: formData.subject.trim(),
+          question: formData.question.trim(),
+          timeExpires: timeExpiresTimestamp,
+          timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
         };
 
         if (formMode === 'create') {
           saveData.author = currentUser.email;
           saveData.deleted = false;
-          saveData.timeCreated = serverTimestamp();
           saveData.counterViews = 0;
           saveData.counterMsgSent = 0;
         }
@@ -723,16 +820,87 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           players: playersToSave,
           brand: formData.brand || 'blick',
           theme: formData.theme,
-          counterViews: formMode === 'create' ? 0 : (currentEmbed?.counterViews || 0),
-          totalVotes: formMode === 'create' ? 0 : (currentEmbed?.totalVotes || 0)
+          counterViews: formMode === 'create' ? 0 : (legacyEmbed?.counterViews || 0),
+          timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
         };
 
         if (formMode === 'create') {
           saveData.author = currentUser.email;
           saveData.deleted = false;
-          saveData.timeCreated = serverTimestamp();
         }
         // Toujours mettre à jour timeUpdated
+        saveData.timeUpdated = serverTimestamp();
+      } else if (formData.type === 'natinotes') {
+        // Validation spécifique aux notes des joueurs
+        if (!formData.theme) {
+          triggerValidationError('Rubrique');
+          return;
+        }
+        if (!formData.title || formData.title.trim() === '') {
+          triggerValidationError('Événement');
+          return;
+        }
+        if (!Array.isArray(formData.players) || formData.players.length < 1) {
+          triggerValidationError('Ajouter des joueurs');
+          return;
+        }
+
+        // Note Blick et paragraphe sont obligatoires pour chaque joueur.
+        // `index` cible le label du joueur fautif (les cartes partagent les
+        // mêmes intitulés) plutôt que le premier de la liste.
+        for (let index = 0; index < formData.players.length; index++) {
+          const player = formData.players[index];
+          if (!player.name || player.name.trim() === '') {
+            triggerValidationError('Ajouter des joueurs');
+            return;
+          }
+          if (!player.blickRating) {
+            triggerValidationError('Note Blick', undefined, index);
+            return;
+          }
+          if (!player.comment || player.comment.trim() === '') {
+            triggerValidationError('Paragraphe', undefined, index);
+            return;
+          }
+        }
+
+        // L'id est la clé de stats.playerRatings : il doit être unique dans le widget
+        const natinotesIds = formData.players.map((p) => p.id);
+        if (new Set(natinotesIds).size !== natinotesIds.length) {
+          triggerValidationError('Joueurs (doublon)');
+          return;
+        }
+
+        const natinotesPlayers = formData.players.map((player) => ({
+          id: player.id,
+          name: player.name.trim(),
+          // Le nom d'équipe vient du catalogue ; plus de valeur par défaut
+          // depuis que les équipes sont créées librement dans le backend.
+          team: player.team || '',
+          img: player.img ?? null,
+          // Cadrage du portrait gelé avec l'image ; borné avant écriture.
+          focal: normalizeFocal(player.focal),
+          blickRating: Number(player.blickRating),
+          comment: player.comment,
+        }));
+
+        saveData = {
+          type: 'natinotes',
+          title: formData.title.trim(),
+          // `label` n'est plus saisi ; on préserve celui des widgets déjà publiés
+          label: (formData.label ?? legacyEmbed?.label ?? '').trim(),
+          players: natinotesPlayers,
+          showRecap: formData.showRecap !== false,
+          brand: formData.brand || 'blick',
+          theme: formData.theme,
+          counterViews: formMode === 'create' ? 0 : (legacyEmbed?.counterViews || 0),
+          timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
+        };
+
+        if (formMode === 'create') {
+          saveData.author = currentUser.email;
+          saveData.deleted = false;
+        }
         saveData.timeUpdated = serverTimestamp();
       } else if (formData.type === 'prono') {
         // Validation spécifique aux pronostics
@@ -797,13 +965,13 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           },
           brand: formData.brand || 'blick',
           theme: formData.theme,
-          counterViews: formMode === 'create' ? 0 : (currentEmbed?.counterViews || 0)
+          counterViews: formMode === 'create' ? 0 : (legacyEmbed?.counterViews || 0),
+          timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
         };
 
         if (formMode === 'create') {
           saveData.author = currentUser.email;
           saveData.deleted = false;
-          saveData.timeCreated = serverTimestamp();
         }
         saveData.timeUpdated = serverTimestamp();
       } else if (formData.type === 'facts') {
@@ -889,7 +1057,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         const itemsToSave = formData.factsData.items.map(item => {
           const baseItem = {
-            id: item.id || (Date.now() + Math.random().toString(36).substr(2, 9)),
+            id: item.id || crypto.randomUUID(),
             icon: item.icon || '',
             title: item.title || '',
             type: item.type || 'normal',
@@ -912,7 +1080,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           type: 'facts',
           brand: formData.brand || 'blick',
           theme: formData.theme,
-          counterViews: formMode === 'create' ? 0 : (currentEmbed?.counterViews || 0)
+          counterViews: formMode === 'create' ? 0 : (legacyEmbed?.counterViews || 0)
         };
 
         const factsDataObj = {
@@ -938,10 +1106,251 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         saveData.timeUpdated = serverTimestamp();
       }
 
+      // ADAPTATEUR: Transformation de la data legacy vers le schéma `widgets`
+      const transformWidgetData = (docItem) => {
+        const { id, author, brand, theme, deleted, type, timeCreated, timeUpdated, counterViews, _originalStats, ...rest } = docItem;
+        const baseType = (type || 'unknown').toLowerCase();
+        
+        const newDoc = {
+          type: baseType,
+          meta: {
+            id: id || '',
+            brand: brand || '',
+            theme: theme || '',
+            author: author || '',
+            deleted: !!deleted,
+            timeCreated: timeCreated || serverTimestamp(),
+            timeUpdated: timeUpdated || serverTimestamp()
+          },
+          stats: {
+            ...(_originalStats || {}),
+            views: (counterViews || _originalStats?.views || 0)
+          },
+          data: {}
+        };
+
+        switch (baseType) {
+          case 'facts':
+            newDoc.data.title = rest.rencontre || (rest.factsData && rest.factsData.rencontre) || '';
+            newDoc.stats.reveal = rest.counterReveal ?? _originalStats?.reveal ?? 0;
+            newDoc.data.date = rest.date || (rest.factsData && rest.factsData.date) || '';
+            
+            const rawItems = rest.items || (rest.factsData && rest.factsData.items) || [];
+            const cleanItemsForDoc = [];
+            
+            (Array.isArray(rawItems) ? rawItems : Object.values(rawItems)).forEach(item => {
+               const { votes, ...itemWithoutVotes } = item;
+               cleanItemsForDoc.push(itemWithoutVotes);
+            });
+            
+            newDoc.data.items = cleanItemsForDoc;
+            newDoc.stats.ratingStats = rest.ratingStats || _originalStats?.ratingStats || {};
+            break;
+          case 'teaser':
+            newDoc.data.title = rest.teaserTitle || '';
+            newDoc.data.label = rest.teaserLabel || '';
+            newDoc.stats.clicks = rest.counterClicks ?? _originalStats?.clicks ?? 0;
+            newDoc.data.img = rest.img || '';
+            break;
+          case 'quiz':
+            newDoc.data.title = rest.title || '';
+            newDoc.data.conclusion = rest.conclusion || {};
+            newDoc.data.questions = rest.questions || [];
+            newDoc.stats.statsGlobal = rest.statsGlobal || _originalStats?.statsGlobal || {};
+            newDoc.stats.statsQuestions = rest.statsQuestions || _originalStats?.statsQuestions || {};
+            break;
+          case 'potm':
+            newDoc.data.context = rest.context || {};
+            
+            const rawPlayers = rest.players || [];
+            const cleanPlayers = [];
+            newDoc.stats.playersVotes = rest.playersVotes || _originalStats?.playersVotes || {};
+            
+            rawPlayers.forEach(p => {
+               const pId = p.id;
+               if (p.votes !== undefined && p.votes !== null) {
+                   if (newDoc.stats.playersVotes[pId] === undefined) {
+                       newDoc.stats.playersVotes[pId] = p.votes;
+                   }
+               }
+               const { votes, ...playerWithoutVotes } = p;
+               cleanPlayers.push(playerWithoutVotes);
+            });
+            
+            newDoc.data.players = cleanPlayers;
+            break;
+          case 'natinotes': {
+            newDoc.data.title = rest.title || '';
+            newDoc.data.label = rest.label || '';
+            newDoc.data.players = rest.players || [];
+            newDoc.data.showRecap = rest.showRecap !== false;
+
+            // Purge des distributions orphelines : un joueur retiré du widget
+            // perd les notes déjà collectées (décision spec §3).
+            const keptIds = new Set((rest.players || []).map((p) => p.id));
+            const previousRatings = rest.playerRatings || _originalStats?.playerRatings || {};
+            newDoc.stats.playerRatings = Object.fromEntries(
+              Object.entries(previousRatings).filter(([playerId]) => keptIds.has(playerId))
+            );
+            break;
+          }
+          case 'tinder':
+            newDoc.data.tinderTitle = rest.tinderTitle || '';
+            newDoc.data.tinderLabel = rest.tinderLabel || '';
+            newDoc.data.tinderCards = rest.tinderCards || [];
+            newDoc.stats.tinderVotes = rest.tinderVotes || _originalStats?.tinderVotes || {};
+            newDoc.data.tinderLegend = rest.tinderLegend || {};
+            break;
+          case 'prono':
+            const pData = rest.pronoData || {};
+            newDoc.stats.itemVotes = rest.itemVotes || _originalStats?.itemVotes || {};
+            
+            ['item1', 'item2', 'item3'].forEach(k => {
+               if (pData[k]) {
+                   if (pData[k].votes !== undefined && pData[k].votes !== null) {
+                       if (newDoc.stats.itemVotes[k] === undefined) {
+                           newDoc.stats.itemVotes[k] = pData[k].votes;
+                       }
+                   }
+                   delete pData[k].votes;
+               }
+            });
+            newDoc.data.pronoData = pData;
+            break;
+          case 'folder':
+            newDoc.data.folderName = rest.folderName || '';
+            newDoc.data.folderLabel = rest.folderLabel || '';
+            newDoc.data.folderLabelColor = rest.folderLabelColor || '';
+            newDoc.data.img = rest.img || '';
+            
+            const rawButtons = rest.buttons || [];
+            const cleanButtons = [];
+            newDoc.stats.buttonClicks = rest.buttonClicks || _originalStats?.buttonClicks || {};
+            
+            rawButtons.forEach(btn => {
+               const bId = btn.id;
+               if (btn.buttonCounterClicks !== undefined && btn.buttonCounterClicks !== null) {
+                   if (newDoc.stats.buttonClicks[bId] === undefined) {
+                       newDoc.stats.buttonClicks[bId] = btn.buttonCounterClicks;
+                   }
+               }
+               const { buttonCounterClicks, ...btnWithoutCounter } = btn;
+               cleanButtons.push(btnWithoutCounter);
+            });
+            
+            newDoc.data.buttons = cleanButtons;
+            break;
+          case 'calendar':
+            newDoc.data.title = rest.calWording || rest.calName || '';
+            newDoc.stats.seeAllClicks = rest.counterSeeAllClicks ?? _originalStats?.seeAllClicks ?? 0;
+            newDoc.data.dates = rest.dates || [];
+            newDoc.data.nbElemsToShow = rest.nbElemsToShow || 0;
+            break;
+          case 'poll':
+            newDoc.data.question = rest.pollTxt || '';
+            newDoc.data.answerTxts = rest.answerTxts || [];
+            newDoc.stats.answerCounters = rest.answerCounters || _originalStats?.answerCounters || {};
+            break;
+          case 'testimony':
+            newDoc.data.title = rest.title || '';
+            newDoc.stats.msgSent = rest.counterMsgSent ?? _originalStats?.msgSent ?? 0;
+            newDoc.data.subject = rest.subject || '';
+            newDoc.data.question = rest.question || '';
+            newDoc.data.timeExpires = rest.timeExpires || null;
+            break;
+          default:
+            newDoc.data = { ...rest };
+            break;
+        }
+
+        Object.keys(rest).forEach(key => {
+          if (key.startsWith('linkGlobal')) newDoc.data[key] = rest[key];
+        });
+
+        // Purge le compteur de lien global si le lien a été supprimé
+        if (!newDoc.data.linkGlobalHref || newDoc.data.linkGlobalHref.trim() === '') {
+          delete newDoc.stats.globalLinkClicks;
+        }
+
+        const generateUnifiedTitle = (doc, legacyRest) => {
+           let extractedTitle = "";
+           switch (doc.type) {
+             case 'poll':
+               extractedTitle = doc.data?.question || legacyRest.pollTxt || "";
+               break;
+             case 'calendar':
+               extractedTitle = legacyRest.calName || legacyRest.calWording || doc.data?.title || "";
+               break;
+             case 'teaser':
+               extractedTitle = doc.data?.title || legacyRest.teaserTitle || "";
+               if (typeof extractedTitle === 'string') {
+                 extractedTitle = extractedTitle.replace(/\\n|\n/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+               }
+               break;
+             case 'folder':
+               extractedTitle = doc.data?.folderName || legacyRest.folderName || "";
+               if (typeof extractedTitle === 'string') {
+                 extractedTitle = extractedTitle.replace(/\\n|\n/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+               }
+               break;
+             case 'tinder':
+               extractedTitle = doc.data?.tinderTitle || legacyRest.tinderTitle || "";
+               break;
+             case 'quiz':
+               extractedTitle = doc.data?.title || legacyRest.title || "";
+               break;
+             case 'testimony':
+               extractedTitle = doc.data?.subject || legacyRest.subject || legacyRest.title || doc.data?.title || "Appel à témoignage";
+               break;
+             case 'potm':
+               extractedTitle = doc.data?.context?.text || legacyRest.context?.text || "";
+               break;
+             case 'natinotes':
+               extractedTitle = doc.data?.title || legacyRest.title || "";
+               break;
+             case 'prono':
+               const i1 = doc.data?.pronoData?.item1?.name;
+               const i2 = doc.data?.pronoData?.item2?.name;
+               if (i1 && i2) {
+                   extractedTitle = `${i1} - ${i2}`;
+               }
+               break;
+             case 'facts':
+               extractedTitle = doc.data?.title || legacyRest.rencontre || "";
+               break;
+             default:
+               extractedTitle = doc.meta?.title || doc.data?.title || "";
+           }
+           return extractedTitle || "Sans titre";
+        };
+
+        newDoc.meta.title = generateUnifiedTitle(newDoc, rest);
+
+        return newDoc;
+      };
+
+      // Si saveData n'a pas encore _originalStats (pour les autres widgets), utiliser latestStats
+      if (formMode === 'edit') {
+        if (!saveData._originalStats) {
+          saveData._originalStats = latestStats || (legacyEmbed?._originalStats || {});
+        }
+        // Préserver l'auteur, la création, et autres meta qui étaient écrasés à chaque édition
+        saveData.author = legacyEmbed?.author || legacyEmbed?.meta?.author || '';
+        saveData.deleted = legacyEmbed?.deleted || legacyEmbed?.meta?.deleted || false;
+        saveData.brand = formData.brand || legacyEmbed?.brand || legacyEmbed?.meta?.brand || '';
+        saveData.theme = formData.theme || legacyEmbed?.theme || legacyEmbed?.meta?.theme || '';
+        saveData.timeCreated = legacyEmbed?.timeCreated || legacyEmbed?.meta?.timeCreated || serverTimestamp();
+      }
+
+      const finalWidgetData = transformWidgetData(saveData);
+      console.log("DEBUG finalWidgetData:", finalWidgetData);
+
       // Sauvegarde selon le mode
       if (formMode === 'create') {
         // Création d'un nouvel élément
-        const docRef = await addDoc(collection(db, 'embeds'), saveData);
+        const docRef = await addDoc(collection(db, 'widgets'), finalWidgetData);
+        // Assurer que le nouveau document contient son id dans meta.id
+        await updateDoc(docRef, { 'meta.id': docRef.id });
         console.log('Nouvel élément créé avec ID:', docRef.id);
         
         let successMessage = 'Élément créé avec succès !';
@@ -953,112 +1362,163 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         else if (formData.type === 'quiz') successMessage = 'Quiz créé avec succès !';
         else if (formData.type === 'testimony') successMessage = 'Appel à témoignage créé avec succès !';
         else if (formData.type === 'potm') successMessage = 'Joueur·euse du match créé·e avec succès !';
+        else if (formData.type === 'natinotes') successMessage = 'Notes des joueur·euse·s créées avec succès !';
         else if (formData.type === 'prono') successMessage = 'Pronostic créé avec succès !';
         else if (formData.type === 'facts') successMessage = 'Faits marquants créés avec succès !';
         
         console.log(successMessage);
         
-      } else if (formMode === 'edit') {
+} else if (formMode === 'edit') {
         // Mise à jour d'un élément existant
-        if (!currentEmbed?.id) {
+        if (!currentEmbed?.id && !currentEmbed?.meta?.id) {
           throw new Error('ID de l\'élément à éditer manquant');
         }
         
-        const docRef = doc(db, 'embeds', currentEmbed.id);
+        const targetId = currentEmbed.meta?.id || currentEmbed.id;
+        finalWidgetData.meta.id = targetId;
+        const docRef = doc(db, 'widgets', targetId);
         
         // Pour les dossiers et potm, utiliser une transaction pour préserver les compteurs
         if (formData.type === 'folder') {
           await runTransaction(db, async (transaction) => {
-            // Lire le document actuel
             const currentDoc = await transaction.get(docRef);
             if (!currentDoc.exists()) {
               throw new Error('Le document n\'existe pas');
             }
             
             const currentData = currentDoc.data();
-            const currentButtons = currentData.buttons || [];
+            const currentButtonClicks = currentData.stats?.buttonClicks || {};
+            const currentLegacyButtons = currentData.data?.buttons || [];
             
-            // Fusionner les nouveaux boutons avec les compteurs existants
-            // Stratégie d'identification : priorité à l'URL, puis combinaison URL+texte
-            const mergedButtons = saveData.buttons.map((newButton) => {
-              // Chercher d'abord par URL + texte exact
-              let existingButton = currentButtons.find(existing => 
-                existing.buttonUrl === newButton.buttonUrl && 
-                existing.buttonTxt === newButton.buttonTxt
-              );
-              
-              // Si pas trouvé, chercher par URL seulement (cas de correction de texte)
-              if (!existingButton) {
-                existingButton = currentButtons.find(existing => 
-                  existing.buttonUrl === newButton.buttonUrl
-                );
-                
-                // Marquer ce bouton comme "utilisé" pour éviter les doublons
-                if (existingButton) {
-                  const existingIndex = currentButtons.indexOf(existingButton);
-                  currentButtons.splice(existingIndex, 1);
-                }
-              }
-              
-              return {
-                ...newButton,
-                // Préserver buttonCounterClicks s'il existe, sinon initialiser à 0
-                buttonCounterClicks: existingButton?.buttonCounterClicks || 0
-              };
+            const updatedButtonClicks = {};
+
+            finalWidgetData.data.buttons.forEach((newButton) => {
+               let currentClicks = 0;
+               if (currentButtonClicks[newButton.id]) {
+                   currentClicks = currentButtonClicks[newButton.id];
+               } else {
+                   let existingButton = currentLegacyButtons.find(b => b.id === newButton.id) || 
+                                        currentLegacyButtons.find(existing => existing.buttonUrl === newButton.buttonUrl && existing.buttonTxt === newButton.buttonTxt) ||
+                                        currentLegacyButtons.find(existing => existing.buttonUrl === newButton.buttonUrl);
+                   
+                   if (existingButton && existingButton.buttonCounterClicks) {
+                       currentClicks = existingButton.buttonCounterClicks;
+                   }
+               }
+               updatedButtonClicks[newButton.id] = currentClicks;
             });
             
-            // Mettre à jour saveData avec les boutons fusionnés
-            const updatedSaveData = {
-              ...saveData,
-              buttons: mergedButtons
-            };
-            
-            // Effectuer la mise à jour transactionnelle
-            transaction.update(docRef, updatedSaveData);
+            finalWidgetData.stats.buttonClicks = updatedButtonClicks;
+            transaction.update(docRef, finalWidgetData);
           });
-          console.log('Dossier mis à jour avec transaction:', currentEmbed.id);
+          
+          console.log('Dossier mis à jour avec préservation des compteurs');
+        } else if (formData.type === 'quiz') {
+          await runTransaction(db, async (transaction) => {
+            const currentDoc = await transaction.get(docRef);
+            if (!currentDoc.exists()) {
+              throw new Error('Le document n\'existe pas');
+            }
+            
+            const currentData = currentDoc.data();
+            const currentStatsQuestions = currentData.stats?.statsQuestions || currentData.statsQuestions || {};
+            
+            const updatedStatsQuestions = {};
+
+            finalWidgetData.data.questions.forEach((q, idx) => {
+               if (currentStatsQuestions[q.id]) {
+                   updatedStatsQuestions[q.id] = currentStatsQuestions[q.id];
+               } else if (currentStatsQuestions[idx]) {
+                   // Legacy fallback si tableau
+                   updatedStatsQuestions[q.id] = currentStatsQuestions[idx];
+               } else {
+                   updatedStatsQuestions[q.id] = { correct: 0, incorrect: 0 };
+               }
+            });
+            
+            finalWidgetData.stats.statsQuestions = updatedStatsQuestions;
+
+            // Recalcul de scoreDistribution avec les données FRAÎCHES
+            const currentScoreDist = currentData.stats?.statsGlobal?.scoreDistribution || currentData.statsGlobal?.scoreDistribution || {};
+            const n = finalWidgetData.data.questions.length;
+            const updatedScoreDist = { ...currentScoreDist };
+            
+            for (let i = 0; i <= n; i++) {
+              if (!(i in updatedScoreDist)) {
+                updatedScoreDist[i] = 0;
+              }
+            }
+            Object.keys(updatedScoreDist)
+              .map(k => parseInt(k))
+              .filter(k => k < 0 || k > n)
+              .forEach(k => { delete updatedScoreDist[k]; });
+              
+            if (!finalWidgetData.stats.statsGlobal) {
+                finalWidgetData.stats.statsGlobal = {};
+            }
+            finalWidgetData.stats.statsGlobal.scoreDistribution = updatedScoreDist;
+
+            transaction.update(docRef, finalWidgetData);
+          });
+          
+          console.log('Quiz mis à jour avec préservation des compteurs par UUID');
         } else if (formData.type === 'potm') {
           await runTransaction(db, async (transaction) => {
-            // Lire le document actuel pour obtenir les votes à jour
             const currentDoc = await transaction.get(docRef);
             if (!currentDoc.exists()) {
               throw new Error('Le document n\'existe pas');
             }
             
             const currentData = currentDoc.data();
-            const currentPlayers = currentData.players || [];
+            const currentPlayersVotes = currentData.stats?.playersVotes || {};
+            const currentLegacyPlayers = currentData.data?.players || [];
             
-            // Fusionner les joueurs en préservant les votes actuels
-            const mergedPlayers = saveData.players.map((newPlayer) => {
-              // Chercher le joueur existant par ID (prioritaire) ou par nom (fallback)
-              let existingPlayer = null;
-              if (newPlayer.id) {
-                existingPlayer = currentPlayers.find(p => p.id === newPlayer.id);
-              }
-              // Fallback: chercher par nom si pas d'ID ou pas trouvé
-              if (!existingPlayer) {
-                existingPlayer = currentPlayers.find(p => p.name === newPlayer.name);
-              }
-              
-              return {
-                ...newPlayer,
-                // Préserver les votes s'ils existent, sinon 0
-                votes: existingPlayer?.votes || 0
-              };
+            const updatedPlayersVotes = {};
+
+            finalWidgetData.data.players.forEach((newPlayer) => {
+               let currentVotes = 0;
+               if (currentPlayersVotes[newPlayer.id]) {
+                   currentVotes = currentPlayersVotes[newPlayer.id];
+               } else {
+                   let existingPlayer = currentLegacyPlayers.find(p => p.id === newPlayer.id) || currentLegacyPlayers.find(p => p.name === newPlayer.name);
+                   if (existingPlayer && existingPlayer.votes) {
+                       currentVotes = existingPlayer.votes;
+                   }
+               }
+               updatedPlayersVotes[newPlayer.id] = currentVotes;
             });
             
-            // Préserver aussi totalVotes et counterViews actuels
-            const updatedSaveData = {
-              ...saveData,
-              players: mergedPlayers,
-              totalVotes: currentData.totalVotes || 0,
-              counterViews: currentData.counterViews || 0
-            };
-            
-            // Effectuer la mise à jour transactionnelle
-            transaction.update(docRef, updatedSaveData);
+            finalWidgetData.stats.playersVotes = updatedPlayersVotes;
+            transaction.update(docRef, finalWidgetData);
           });
-          console.log('POTM mis à jour avec transaction:', currentEmbed.id);
+          
+          console.log('POTM mis à jour avec préservation des compteurs');
+        } else if (formData.type === 'natinotes') {
+          await runTransaction(db, async (transaction) => {
+            const currentDoc = await transaction.get(docRef);
+            if (!currentDoc.exists()) {
+              throw new Error("Le document n'existe pas");
+            }
+
+            const currentData = currentDoc.data();
+            const currentRatings = currentData.stats?.playerRatings || {};
+
+            // On repart des distributions réellement en base (et non de celles
+            // chargées à l'ouverture du formulaire) pour ne perdre aucune note
+            // déposée pendant l'édition. Les joueurs retirés du widget voient
+            // leur distribution supprimée — décision spec §3.
+            const updatedRatings = {};
+            finalWidgetData.data.players.forEach((player) => {
+              if (currentRatings[player.id]) {
+                updatedRatings[player.id] = currentRatings[player.id];
+              }
+            });
+
+            finalWidgetData.stats.playerRatings = updatedRatings;
+            transaction.update(docRef, finalWidgetData);
+          });
+
+          console.log('Natinotes mis à jour avec préservation des notes');
         } else if (formData.type === 'prono') {
           await runTransaction(db, async (transaction) => {
             const currentDoc = await transaction.get(docRef);
@@ -1067,37 +1527,25 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             }
             const currentData = currentDoc.data();
             
-            // Fusionner les données pour préserver les votes
-            // IMPORTANT: Lors d'une mise à jour transactionnelle, on fusionne ce qui vient du formulaire (noms, couleurs, event, date)
-            // avec les votes qui sont dans la base de données.
+            const currentItemVotes = currentData.stats?.itemVotes || {};
+            const updatedItemVotes = {};
             
-            // Note: saveData contient déjà item1/2/3 votes venant du formulaire, 
-            // mais on préfère la source de vérité de la DB pour éviter les conflits de concurrence sur les votes.
+            ['item1', 'item2', 'item3'].forEach(k => {
+                if (finalWidgetData.data.pronoData[k]) {
+                    let votes = 0;
+                    if (currentItemVotes[k]) {
+                        votes = currentItemVotes[k];
+                    } else if (currentData.data?.pronoData?.[k]?.votes) {
+                        votes = currentData.data.pronoData[k].votes;
+                    }
+                    updatedItemVotes[k] = votes;
+                }
+            });
             
-            const updatedPronoData = {
-              ...saveData.pronoData,
-              item1: {
-                ...saveData.pronoData.item1,
-                votes: currentData.pronoData?.item1?.votes || 1 // Fallback à 1 si jamais undefined
-              },
-              item2: {
-                ...saveData.pronoData.item2,
-                votes: currentData.pronoData?.item2?.votes || 1
-              },
-              item3: {
-                votes: currentData.pronoData?.item3?.votes || 1
-              }
-            };
-            
-            const updatedSaveData = {
-              ...saveData,
-              pronoData: updatedPronoData,
-              counterViews: currentData.counterViews || 0
-            };
-            
-            transaction.update(docRef, updatedSaveData);
+            finalWidgetData.stats.itemVotes = updatedItemVotes;
+            transaction.update(docRef, finalWidgetData);
           });
-          console.log('Pronostic mis à jour avec transaction:', currentEmbed.id);
+          console.log('Pronostic mis à jour avec transaction:', targetId);
         } else if (formData.type === 'facts') {
           await runTransaction(db, async (transaction) => {
             const currentDoc = await transaction.get(docRef);
@@ -1105,63 +1553,15 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
               throw new Error("Le document n'existe pas");
             }
             const currentData = currentDoc.data();
-            const currentFactsData = currentData.factsData || {};
             
-            // Supports both old formats and new format for migrating matching
-            const oldList = currentFactsData.items || [];
-            let currentItems = [];
-            if (Array.isArray(oldList)) {
-                currentItems = oldList;
-            } else if (typeof oldList === 'object') {
-                const keys = Object.keys(oldList).filter(k => !isNaN(k) || k.startsWith('item')).sort();
-                currentItems = keys.map(k => oldList[k]);
-            } else {
-                // very old item1, item2 format
-                let i = 1;
-                while (currentFactsData[`item${i}`]) {
-                    currentItems.push(currentFactsData[`item${i}`]);
-                    i++;
-                }
-            }
+            finalWidgetData.stats.ratingStats = currentData.stats?.ratingStats || currentData.ratingStats || {};
+            
+            // Delete itemCounters if they exist in finalWidgetData to avoid recreating them
+            delete finalWidgetData.stats.itemCounters;
 
-            const updatedItems = saveData.factsData.items.map((newItem, index) => {
-                 let currentVotes = 0;
-                 
-                 // 1. Chercher par l'ID unique explicit (pour les éléments récents)
-                 let matchedItem = currentItems.find(it => it && it.id === newItem.id);
-                 
-                 // 2. Fallback: Chercher par Titre (pour éviter la casse au reordering legacy)
-                 if (!matchedItem) {
-                     matchedItem = currentItems.find(it => it && it.title === newItem.title);
-                 }
-                 
-                 if (matchedItem && matchedItem.votes) {
-                      currentVotes = matchedItem.votes;
-                 } else if (currentItems[index] && currentItems[index].votes) {
-                      currentVotes = currentItems[index].votes;
-                 }
-                 
-                 return {
-                     ...newItem,
-                     votes: currentVotes
-                 };
-            });
-
-            // On reconstruit saveData.factsData en préservant les votes
-            const updatedFactsData = {
-              rencontre: saveData.factsData.rencontre,
-              date: saveData.factsData.date,
-              items: updatedItems
-            };
-
-            const updatedSaveData = {
-              ...saveData,
-              factsData: updatedFactsData,
-              counterViews: currentData.counterViews || 0
-            };
-            transaction.update(docRef, updatedSaveData);
+            transaction.update(docRef, finalWidgetData);
           });
-          console.log('Faits marquants mis à jour avec transaction:', currentEmbed.id);
+          console.log('Faits marquants mis à jour avec transaction:', targetId);
         } else if (formData.type === 'poll') {
           await runTransaction(db, async (transaction) => {
             const currentDoc = await transaction.get(docRef);
@@ -1170,39 +1570,22 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             }
             
             const currentData = currentDoc.data();
-            const currentTxts = currentData.answerTxts || [];
-            const currentCounters = currentData.answerCounters || [];
+            const currentCounters = currentData.stats?.answerCounters || {};
             
-            const originalTxts = saveData.answerOriginalTxts || [];
-            
-            // Fusionner les compteurs : si le texte original existait déjà, on garde son compteur.
-            // Sinon (nouveau texte ou texte modifié), on repart à 0 ou on cherche par texte.
-            const mergedCounters = saveData.answerTxts.map((newTxt, idx) => {
-              const origTxt = originalTxts[idx];
-              if (origTxt && origTxt.trim() !== '') {
-                const existingIndexByOrig = currentTxts.indexOf(origTxt.trim());
-                if (existingIndexByOrig !== -1) {
-                  return currentCounters[existingIndexByOrig] || 0;
-                }
-              }
-              const existingIndexByNew = currentTxts.indexOf(newTxt);
-              return existingIndexByNew !== -1 ? (currentCounters[existingIndexByNew] || 0) : 0;
+            const updatedCounters = {};
+
+            finalWidgetData.data.answerTxts.forEach((ans) => {
+               updatedCounters[ans.id] = currentCounters[ans.id] || 0;
             });
             
-            // Retirer `answerOriginalTxts` de saveData pour ne pas polluer Firestore
-            const { answerOriginalTxts, ...dataToSave } = saveData;
-            const updatedSaveData = {
-              ...dataToSave,
-              answerCounters: mergedCounters
-            };
-            
-            transaction.update(docRef, updatedSaveData);
+            finalWidgetData.stats.answerCounters = updatedCounters;
+            transaction.update(docRef, finalWidgetData);
           });
-          console.log('Sondage mis à jour avec transaction:', currentEmbed.id);
+          console.log('Sondage mis à jour avec transaction:', targetId);
         } else {
-          // Pour les autres types, mise à jour classique
-          await updateDoc(docRef, saveData);
-          console.log('Élément mis à jour:', currentEmbed.id);
+          // Mise à jour standard pour les autres types
+          await updateDoc(docRef, finalWidgetData);
+          console.log('Élément mis à jour:', targetId);
         }
         
         let successMessage = 'Élément modifié avec succès !';
@@ -1214,6 +1597,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         else if (formData.type === 'quiz') successMessage = 'Quiz modifié avec succès !';
         else if (formData.type === 'testimony') successMessage = 'Appel à témoignage modifié avec succès !';
         else if (formData.type === 'potm') successMessage = 'Joueur·euse du match modifié·e avec succès !';
+        else if (formData.type === 'natinotes') successMessage = 'Notes des joueur·euse·s modifiées avec succès !';
         else if (formData.type === 'prono') successMessage = 'Pronostic modifié avec succès !';
         else if (formData.type === 'facts') successMessage = 'Faits marquants modifiés avec succès !';
         
@@ -1265,7 +1649,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         {/* Contenu du formulaire selon le type */}
         {formType === 'poll' && (
           <PollForm
-            currentEmbed={currentEmbed}
+            currentEmbed={legacyEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}
           />
@@ -1273,7 +1657,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {formType === 'calendar' && (
           <CalendarForm
-            currentEmbed={currentEmbed}
+            currentEmbed={legacyEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}
           />
@@ -1281,7 +1665,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {formType === 'teaser' && (
           <TeaserForm
-            currentEmbed={currentEmbed}
+            currentEmbed={legacyEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}
           />
@@ -1289,7 +1673,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {formType === 'folder' && (
           <FolderForm
-            currentEmbed={currentEmbed}
+            currentEmbed={legacyEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}
           />
@@ -1297,7 +1681,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {formType === 'tinder' && (
           <TinderForm
-            currentEmbed={currentEmbed}
+            currentEmbed={legacyEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}
           />
@@ -1305,7 +1689,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {formType === 'quiz' && (
           <QuizForm
-            currentEmbed={currentEmbed}
+            currentEmbed={legacyEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}
           />
@@ -1313,7 +1697,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {formType === 'testimony' && (
           <TestimonyForm
-            currentEmbed={currentEmbed}
+            currentEmbed={legacyEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}
           />
@@ -1321,7 +1705,15 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {formType === 'potm' && (
           <PotmForm
-            currentEmbed={currentEmbed}
+            currentEmbed={legacyEmbed}
+            formMode={formMode}
+            onChange={handleFormDataChange}
+          />
+        )}
+
+        {formType === 'natinotes' && (
+          <NatinotesForm
+            currentEmbed={legacyEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}
           />
@@ -1329,7 +1721,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {formType === 'prono' && (
           <PronoForm
-            currentEmbed={currentEmbed}
+            currentEmbed={legacyEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}
           />
@@ -1337,7 +1729,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {formType === 'facts' && (
           <FactsForm
-            currentEmbed={currentEmbed}
+            currentEmbed={legacyEmbed}
             formMode={formMode}
             onChange={handleFormDataChange}
           />
