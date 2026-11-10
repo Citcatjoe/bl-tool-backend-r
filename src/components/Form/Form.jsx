@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import s from './Form.module.scss';
 import PollForm from './PollForm';
-import CalendarForm from './CalendarForm';
+import CalendarForm, { SHOW_ADVANCED_DATE_OPTIONS } from './CalendarForm';
 import TeaserForm from './TeaserForm';
 import FolderForm from './FolderForm';
 import TinderForm from './TinderForm';
@@ -14,6 +14,7 @@ import NatinotesForm from './NatinotesForm';
 import { normalizeFocal } from '../../data/portraitFocal';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, runTransaction, Timestamp, getDoc } from 'firebase/firestore';
 import { db } from '@rms/services';
+import { transformWidgetData, validatePoll, buildPollSaveData } from '@rms/widget-model';
 import { getAuth } from 'firebase/auth';
 
 function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataChange, devMode }) {
@@ -208,44 +209,24 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
       // Construction des données selon le type
       if (formData.type === 'poll') {
-        // Validation spécifique aux sondages
-        if (!formData.theme) {
-          triggerValidationError('Rubrique');
+        // Validation et préparation partagées avec l'API (@rms/widget-model)
+        const pollInput = {
+          question: formData.pollTxt,
+          answers: formData.answerTxts,
+          answerCounters: formData.answerCounters,
+          brand: formData.brand,
+          theme: formData.theme
+        };
+        const [firstError] = validatePoll(pollInput);
+        if (firstError) {
+          const answerIndex = firstError.field.match(/^answers\[(\d+)\]$/)?.[1];
+          const pollFieldLabels = { theme: 'Rubrique', question: 'Question du sondage', answers: 'Réponses possibles', brand: 'Brand' };
+          triggerValidationError(answerIndex !== undefined ? `Réponse ${Number(answerIndex) + 1}` : pollFieldLabels[firstError.field]);
           return;
         }
-        if (!formData.pollTxt) {
-          triggerValidationError('Question du sondage');
-          return;
-        }
-        if (!Array.isArray(formData.answerTxts) || formData.answerTxts.length < 2) {
-          triggerValidationError('Réponses possibles');
-          return;
-        }
-
-        // Vérifier qu'AUCUNE des réponses présentes n'est vide
-        const firstEmptyIndex = formData.answerTxts.findIndex(ans => !ans.text || ans.text.trim() === '');
-        if (firstEmptyIndex !== -1) {
-          triggerValidationError(`Réponse ${firstEmptyIndex + 1}`);
-          return;
-        }
-
-        // Filtrer les compteurs en fonction des réponses valides
-        const filteredTxts = [];
-        const filteredCounters = {};
-        formData.answerTxts.forEach((ans) => {
-          if (ans.text && ans.text.trim() !== '') {
-            filteredTxts.push({ id: ans.id, text: ans.text.trim() });
-            filteredCounters[ans.id] = formData.answerCounters[ans.id] || 0;
-          }
-        });
 
         saveData = {
-          type: 'poll',
-          pollTxt: formData.pollTxt,
-          answerTxts: filteredTxts,
-          answerCounters: filteredCounters,
-          brand: formData.brand || 'blick',
-          theme: formData.theme,
+          ...buildPollSaveData(pollInput),
           timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
           timeUpdated: serverTimestamp()
         };
@@ -277,6 +258,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         // Vérifier que toutes les dates ont un texte et une date de début
         // Et si showBadge est true, une date de fin est requise
+        // (champs End / badges / lien live masqués : pas de validation sur des champs invisibles)
         for (let i = 0; i < formData.dates.length; i++) {
           const date = formData.dates[i];
           if (!date.text || date.text.trim() === '') {
@@ -287,7 +269,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
             triggerValidationError(`Start de la date ${i + 1}`);
             return;
           }
-          if (date.showBadge) {
+          if (SHOW_ADVANCED_DATE_OPTIONS && date.showBadge) {
             if (!date.endDate) {
               triggerValidationError(`Fin de la date ${i + 1}`);
               return;
@@ -300,7 +282,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
               return;
             }
           }
-          if (date.liveLinkEnabled && (!date.liveLinkUrl || date.liveLinkUrl.trim() === '')) {
+          if (SHOW_ADVANCED_DATE_OPTIONS && date.liveLinkEnabled && (!date.liveLinkUrl || date.liveLinkUrl.trim() === '')) {
             triggerValidationError(`URL du live de la date ${i + 1}`);
             return;
           }
@@ -336,6 +318,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
            
            return {
              text: d.text,
+             complement: d.complement?.trim() || '',
              scheduleStart: scheduleStart,
              scheduleEnd: scheduleEnd,
              showBadge: d.showBadge || false,
@@ -1106,229 +1089,6 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         saveData.timeUpdated = serverTimestamp();
       }
 
-      // ADAPTATEUR: Transformation de la data legacy vers le schéma `widgets`
-      const transformWidgetData = (docItem) => {
-        const { id, author, brand, theme, deleted, type, timeCreated, timeUpdated, counterViews, _originalStats, ...rest } = docItem;
-        const baseType = (type || 'unknown').toLowerCase();
-        
-        const newDoc = {
-          type: baseType,
-          meta: {
-            id: id || '',
-            brand: brand || '',
-            theme: theme || '',
-            author: author || '',
-            deleted: !!deleted,
-            timeCreated: timeCreated || serverTimestamp(),
-            timeUpdated: timeUpdated || serverTimestamp()
-          },
-          stats: {
-            ...(_originalStats || {}),
-            views: (counterViews || _originalStats?.views || 0)
-          },
-          data: {}
-        };
-
-        switch (baseType) {
-          case 'facts':
-            newDoc.data.title = rest.rencontre || (rest.factsData && rest.factsData.rencontre) || '';
-            newDoc.stats.reveal = rest.counterReveal ?? _originalStats?.reveal ?? 0;
-            newDoc.data.date = rest.date || (rest.factsData && rest.factsData.date) || '';
-            
-            const rawItems = rest.items || (rest.factsData && rest.factsData.items) || [];
-            const cleanItemsForDoc = [];
-            
-            (Array.isArray(rawItems) ? rawItems : Object.values(rawItems)).forEach(item => {
-               const { votes, ...itemWithoutVotes } = item;
-               cleanItemsForDoc.push(itemWithoutVotes);
-            });
-            
-            newDoc.data.items = cleanItemsForDoc;
-            newDoc.stats.ratingStats = rest.ratingStats || _originalStats?.ratingStats || {};
-            break;
-          case 'teaser':
-            newDoc.data.title = rest.teaserTitle || '';
-            newDoc.data.label = rest.teaserLabel || '';
-            newDoc.stats.clicks = rest.counterClicks ?? _originalStats?.clicks ?? 0;
-            newDoc.data.img = rest.img || '';
-            break;
-          case 'quiz':
-            newDoc.data.title = rest.title || '';
-            newDoc.data.conclusion = rest.conclusion || {};
-            newDoc.data.questions = rest.questions || [];
-            newDoc.stats.statsGlobal = rest.statsGlobal || _originalStats?.statsGlobal || {};
-            newDoc.stats.statsQuestions = rest.statsQuestions || _originalStats?.statsQuestions || {};
-            break;
-          case 'potm':
-            newDoc.data.context = rest.context || {};
-            
-            const rawPlayers = rest.players || [];
-            const cleanPlayers = [];
-            newDoc.stats.playersVotes = rest.playersVotes || _originalStats?.playersVotes || {};
-            
-            rawPlayers.forEach(p => {
-               const pId = p.id;
-               if (p.votes !== undefined && p.votes !== null) {
-                   if (newDoc.stats.playersVotes[pId] === undefined) {
-                       newDoc.stats.playersVotes[pId] = p.votes;
-                   }
-               }
-               const { votes, ...playerWithoutVotes } = p;
-               cleanPlayers.push(playerWithoutVotes);
-            });
-            
-            newDoc.data.players = cleanPlayers;
-            break;
-          case 'natinotes': {
-            newDoc.data.title = rest.title || '';
-            newDoc.data.label = rest.label || '';
-            newDoc.data.players = rest.players || [];
-            newDoc.data.showRecap = rest.showRecap !== false;
-
-            // Purge des distributions orphelines : un joueur retiré du widget
-            // perd les notes déjà collectées (décision spec §3).
-            const keptIds = new Set((rest.players || []).map((p) => p.id));
-            const previousRatings = rest.playerRatings || _originalStats?.playerRatings || {};
-            newDoc.stats.playerRatings = Object.fromEntries(
-              Object.entries(previousRatings).filter(([playerId]) => keptIds.has(playerId))
-            );
-            break;
-          }
-          case 'tinder':
-            newDoc.data.tinderTitle = rest.tinderTitle || '';
-            newDoc.data.tinderLabel = rest.tinderLabel || '';
-            newDoc.data.tinderCards = rest.tinderCards || [];
-            newDoc.stats.tinderVotes = rest.tinderVotes || _originalStats?.tinderVotes || {};
-            newDoc.data.tinderLegend = rest.tinderLegend || {};
-            break;
-          case 'prono':
-            const pData = rest.pronoData || {};
-            newDoc.stats.itemVotes = rest.itemVotes || _originalStats?.itemVotes || {};
-            
-            ['item1', 'item2', 'item3'].forEach(k => {
-               if (pData[k]) {
-                   if (pData[k].votes !== undefined && pData[k].votes !== null) {
-                       if (newDoc.stats.itemVotes[k] === undefined) {
-                           newDoc.stats.itemVotes[k] = pData[k].votes;
-                       }
-                   }
-                   delete pData[k].votes;
-               }
-            });
-            newDoc.data.pronoData = pData;
-            break;
-          case 'folder':
-            newDoc.data.folderName = rest.folderName || '';
-            newDoc.data.folderLabel = rest.folderLabel || '';
-            newDoc.data.folderLabelColor = rest.folderLabelColor || '';
-            newDoc.data.img = rest.img || '';
-            
-            const rawButtons = rest.buttons || [];
-            const cleanButtons = [];
-            newDoc.stats.buttonClicks = rest.buttonClicks || _originalStats?.buttonClicks || {};
-            
-            rawButtons.forEach(btn => {
-               const bId = btn.id;
-               if (btn.buttonCounterClicks !== undefined && btn.buttonCounterClicks !== null) {
-                   if (newDoc.stats.buttonClicks[bId] === undefined) {
-                       newDoc.stats.buttonClicks[bId] = btn.buttonCounterClicks;
-                   }
-               }
-               const { buttonCounterClicks, ...btnWithoutCounter } = btn;
-               cleanButtons.push(btnWithoutCounter);
-            });
-            
-            newDoc.data.buttons = cleanButtons;
-            break;
-          case 'calendar':
-            newDoc.data.title = rest.calWording || rest.calName || '';
-            newDoc.stats.seeAllClicks = rest.counterSeeAllClicks ?? _originalStats?.seeAllClicks ?? 0;
-            newDoc.data.dates = rest.dates || [];
-            newDoc.data.nbElemsToShow = rest.nbElemsToShow || 0;
-            break;
-          case 'poll':
-            newDoc.data.question = rest.pollTxt || '';
-            newDoc.data.answerTxts = rest.answerTxts || [];
-            newDoc.stats.answerCounters = rest.answerCounters || _originalStats?.answerCounters || {};
-            break;
-          case 'testimony':
-            newDoc.data.title = rest.title || '';
-            newDoc.stats.msgSent = rest.counterMsgSent ?? _originalStats?.msgSent ?? 0;
-            newDoc.data.subject = rest.subject || '';
-            newDoc.data.question = rest.question || '';
-            newDoc.data.timeExpires = rest.timeExpires || null;
-            break;
-          default:
-            newDoc.data = { ...rest };
-            break;
-        }
-
-        Object.keys(rest).forEach(key => {
-          if (key.startsWith('linkGlobal')) newDoc.data[key] = rest[key];
-        });
-
-        // Purge le compteur de lien global si le lien a été supprimé
-        if (!newDoc.data.linkGlobalHref || newDoc.data.linkGlobalHref.trim() === '') {
-          delete newDoc.stats.globalLinkClicks;
-        }
-
-        const generateUnifiedTitle = (doc, legacyRest) => {
-           let extractedTitle = "";
-           switch (doc.type) {
-             case 'poll':
-               extractedTitle = doc.data?.question || legacyRest.pollTxt || "";
-               break;
-             case 'calendar':
-               extractedTitle = legacyRest.calName || legacyRest.calWording || doc.data?.title || "";
-               break;
-             case 'teaser':
-               extractedTitle = doc.data?.title || legacyRest.teaserTitle || "";
-               if (typeof extractedTitle === 'string') {
-                 extractedTitle = extractedTitle.replace(/\\n|\n/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-               }
-               break;
-             case 'folder':
-               extractedTitle = doc.data?.folderName || legacyRest.folderName || "";
-               if (typeof extractedTitle === 'string') {
-                 extractedTitle = extractedTitle.replace(/\\n|\n/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-               }
-               break;
-             case 'tinder':
-               extractedTitle = doc.data?.tinderTitle || legacyRest.tinderTitle || "";
-               break;
-             case 'quiz':
-               extractedTitle = doc.data?.title || legacyRest.title || "";
-               break;
-             case 'testimony':
-               extractedTitle = doc.data?.subject || legacyRest.subject || legacyRest.title || doc.data?.title || "Appel à témoignage";
-               break;
-             case 'potm':
-               extractedTitle = doc.data?.context?.text || legacyRest.context?.text || "";
-               break;
-             case 'natinotes':
-               extractedTitle = doc.data?.title || legacyRest.title || "";
-               break;
-             case 'prono':
-               const i1 = doc.data?.pronoData?.item1?.name;
-               const i2 = doc.data?.pronoData?.item2?.name;
-               if (i1 && i2) {
-                   extractedTitle = `${i1} - ${i2}`;
-               }
-               break;
-             case 'facts':
-               extractedTitle = doc.data?.title || legacyRest.rencontre || "";
-               break;
-             default:
-               extractedTitle = doc.meta?.title || doc.data?.title || "";
-           }
-           return extractedTitle || "Sans titre";
-        };
-
-        newDoc.meta.title = generateUnifiedTitle(newDoc, rest);
-
-        return newDoc;
-      };
-
       // Si saveData n'a pas encore _originalStats (pour les autres widgets), utiliser latestStats
       if (formMode === 'edit') {
         if (!saveData._originalStats) {
@@ -1342,7 +1102,8 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         saveData.timeCreated = legacyEmbed?.timeCreated || legacyEmbed?.meta?.timeCreated || serverTimestamp();
       }
 
-      const finalWidgetData = transformWidgetData(saveData);
+      // ADAPTATEUR partagé avec l'API : enregistrement plat → document `widgets` 4 blocs
+      const finalWidgetData = transformWidgetData(saveData, { serverTimestamp });
       console.log("DEBUG finalWidgetData:", finalWidgetData);
 
       // Sauvegarde selon le mode

@@ -1,6 +1,7 @@
 import s from './ListItem.module.scss';
 import { doc, updateDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '@rms/services'; // Assurez-vous que le chemin d'importation de db est correct
+import { buildEmbedUrl, DEFAULT_CLIENT_BASE_URL } from '@rms/widget-model';
 import { useState, useRef, useEffect } from 'react';
 import ConfirmModal from '../ConfirmModal/ConfirmModal';
 import TypeBadge from '../TypeBadge';
@@ -142,8 +143,9 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
 
   const handleSocialView = () => {
     let url = '';
+    const clientBaseUrl = import.meta.env.VITE_CLIENT_BASE_URL || DEFAULT_CLIENT_BASE_URL;
     if (embed.type === 'poll') {
-      url = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-poll/?pollDoc=${embed.id}&postMode=true`;
+      url = `${clientBaseUrl}poll/?pollDoc=${embed.id}&postMode=true`;
     } else {
       console.warn('Type d\'embed non supporté pour la vue sociale:', embed.type);
       return;
@@ -153,18 +155,12 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
   };
 
   const handleCopy = () => {
-    const type = embed.type || 'unknown';
-    
-    // Base URL facilement modifiable si l'arborescence FTP (monorepo) évolue
-    // On conserve l'ancienne arborescence (Option A) pour ne rien casser
-    const baseUrl = `https://storytelling.blick.ch/fr/__is_embed_somewhere/bl-tools-client-${type}/`;
-    let url = `${baseUrl}?${type}Doc=${embed.id}`;
-    
-    // Cas spécifique pour le widget poll
-    if (type === 'poll') {
-      const brandParam = embed.brand || 'blick';
-      url += `&brand=${brandParam}`;
-    }
+    // Base URL pilotée par l'environnement actif (.env-test / .env-prod),
+    // pour que le lien copié pointe vers la même Firestore que le backend
+    // qui l'a généré. Fallback prod si la variable n'est pas définie.
+    // Même règle que l'embedUrl renvoyée par l'API (@rms/widget-model).
+    const clientBaseUrl = import.meta.env.VITE_CLIENT_BASE_URL || DEFAULT_CLIENT_BASE_URL;
+    const url = buildEmbedUrl({ type: embed.type || 'unknown', id: embed.id, brand: embed.brand }, clientBaseUrl);
 
     navigator.clipboard.writeText(url)
       .then(() => {
