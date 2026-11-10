@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './App.scss';
 import LoadingOverlay from './components/LoadingOverlay/LoadingOverlay';
 import BlackOverlay from './components/BlackOverlay/BlackOverlay';
@@ -35,6 +35,7 @@ import CalendarListItem from './components/CalendarListItem/CalendarListItem';
 import ListItem from './components/ListItem/ListItem';
 import Form from './components/Form/Form';
 import Footer from './components/Footer/Footer';
+import TestEnvBanner from './components/TestEnvBanner/TestEnvBanner';
 
 function App() {
     const [docId, setDocId] = useState(null);
@@ -47,6 +48,11 @@ function App() {
     const [newPickerOpen, setNewPickerOpen] = useState(false);
     const [teamEditorOpen, setTeamEditorOpen] = useState(false);
     const [embeds, setEmbeds] = useState([]);
+    const [embedsLoaded, setEmbedsLoaded] = useState(false); // liste déjà chargée (une fois / live)
+    // Ouverture d'un widget en édition via `?edit=<id>` (lien depuis le Hub Rédaction).
+    const [editRequestId, setEditRequestId] = useState(() => new URLSearchParams(window.location.search).get('edit') || null);
+    const [editNotFound, setEditNotFound] = useState(false);
+    const editHandledRef = useRef(false);
     const [searchTerm, setSearchTerm] = useState(''); // State pour la recherche
     const [typeFilter, setTypeFilter] = useState('all'); // State pour le filtre de type ('all', 'poll', 'calendar')
     const [currentPage, setCurrentPage] = useState(1); // Page courante (1-indexed)
@@ -82,6 +88,7 @@ function App() {
             // MODE TEMPS RÉEL
             const unsubscribe = listenToEmbeds((data) => {
                 setEmbeds(data);
+                setEmbedsLoaded(true);
                 console.log('Données Firestore widgets (live):', data);
                 // Compter les lectures en mode dev
                 if (devMode) {
@@ -101,6 +108,7 @@ function App() {
             const data = await fetchData(devMode, 'widgets');
             console.log('Données Firestore widgets (once):', data);
             setEmbeds(data);
+            setEmbedsLoaded(true);
             setReadCount(prevCount => prevCount + data.length);
         } catch (error) {
             // Removed error log
@@ -164,6 +172,31 @@ function App() {
         setCurrentEmbed(embed); // Élément à éditer
         setFormVisible(true);
     };
+
+    // `?edit=<id>` : après connexion ET chargement de la liste, ouvrir le widget en édition.
+    // Tant qu'on n'est pas connecté, le paramètre reste dans l'adresse (on l'ouvrira ensuite).
+    useEffect(() => {
+        if (!user || !editRequestId || editHandledRef.current) return;
+        if (!embedsLoaded) return;
+        editHandledRef.current = true;
+
+        const target = embeds.find((embed) => (embed.meta?.id || embed.id) === editRequestId);
+
+        // Retirer le paramètre pour qu'un rechargement ne rouvre pas le formulaire.
+        const url = new URL(window.location.href);
+        url.searchParams.delete('edit');
+        window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+
+        if (target) {
+            setFormMode('edit');
+            setFormType(target.type);
+            setCurrentEmbed(target);
+            setFormVisible(true);
+        } else {
+            setEditNotFound(true);
+        }
+        setEditRequestId(null);
+    }, [user, embedsLoaded, embeds, editRequestId]);
 
     const handleCloseForm = () => {
         setFormVisible(false);
@@ -248,15 +281,17 @@ function App() {
     }
 
     if (loading) {
-        return <LoadingOverlay />;
+        return <><TestEnvBanner /><LoadingOverlay /></>;
     }
 
     if (!user) {
-        return <Login onLogin={handleLogin} />;
+        return <><TestEnvBanner /><Login onLogin={handleLogin} /></>;
     }
 
     return (
         <div className="App relative bg-gray h-screen flex flex-col overflow-hidden">
+
+            <TestEnvBanner />
 
             <BlackOverlay formVisible={formVisible} onClick={handleCloseForm} />
 
@@ -293,6 +328,12 @@ function App() {
             />
 
             <div className="flex-1 overflow-y-auto px-6 py-8 pt-16">
+
+                {editNotFound && (
+                    <div className="container max-w-5xl mx-auto mb-6 px-6 py-4 bg-white border border-gray-300 rounded-lg text-gray-700">
+                        Widget introuvable.
+                    </div>
+                )}
 
                 {/* <button
                     className="fixed bottom-6 left-6 w-8 h-8 bg-amber-600 z-40"
