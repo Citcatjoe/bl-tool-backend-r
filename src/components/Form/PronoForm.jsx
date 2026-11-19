@@ -109,7 +109,7 @@ function PronoForm({ currentEmbed, formMode, onChange }) {
       <div className="flex gap-6 items-start">
         {/* Brand */}
         <div className="flex-none w-44">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Brand
           </label>
           <div className="flex gap-4 items-center h-12">
@@ -120,9 +120,9 @@ function PronoForm({ currentEmbed, formMode, onChange }) {
                 value="blick"
                 checked={brand === 'blick'}
                 onChange={() => setBrand('blick')}
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                className="w-4 h-4 text-accent border-line focus:ring-accent cursor-pointer"
               />
-              <span className="text-sm text-gray-700">Blick</span>
+              <span className="text-sm text-ink">Blick</span>
             </label>
             <label className="flex items-center gap-2 cursor-not-allowed opacity-50 select-none" title="Le module de pronostic n'est pas encore compatible avec la brand PME.">
               <input
@@ -132,48 +132,48 @@ function PronoForm({ currentEmbed, formMode, onChange }) {
                 checked={brand === 'pme'}
                 onChange={() => setBrand('pme')}
                 disabled
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-not-allowed"
+                className="w-4 h-4 text-accent border-line focus:ring-accent cursor-not-allowed"
               />
-              <span className="text-sm text-gray-400">Pme</span>
+              <span className="text-sm text-muted">Pme</span>
             </label>
           </div>
         </div>
 
         {/* Rubrique */}
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Rubrique *
           </label>
           <select
             value={theme || ''}
             onChange={(e) => setTheme(e.target.value || null)}
-            className={`field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!theme ? 'text-gray-400' : 'text-gray-700'
+            className={`field mb-0 w-full px-3 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer ${!theme ? 'text-muted' : 'text-ink'
               }`}
             required
           >
             <option value="" disabled hidden>Sélectionner...</option>
-            <option value="Suisse" className="text-gray-700">Suisse</option>
-            <option value="Inter" className="text-gray-700">Inter</option>
-            <option value="Sport" className="text-gray-700">Sport</option>
+            <option value="Suisse" className="text-ink">Suisse</option>
+            <option value="Inter" className="text-ink">Inter</option>
+            <option value="Sport" className="text-ink">Sport</option>
           </select>
         </div>
       </div>
 
       <div className="py-4">
-        <hr className="border-gray-200" />
+        <hr className="border-line" />
       </div>
 
       {/* Contexte & Date */}
       <div className="flex gap-4 items-end">
         {/* Contexte */}
         <div className="w-[70%]">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Contexte *
           </label>
           <select
             value={event}
             onChange={(e) => setEvent(e.target.value)}
-            className={`field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!event ? 'text-gray-400' : 'text-gray-700'}`}
+            className={`field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer ${!event ? 'text-muted' : 'text-ink'}`}
             required
           >
             <option value="" disabled hidden>Sélectionner une compétition</option>
@@ -184,14 +184,14 @@ function PronoForm({ currentEmbed, formMode, onChange }) {
         </div>
         {/* Date */}
         <div className="w-[30%]">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Date *
           </label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+            className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer"
             required
           />
         </div>
@@ -199,20 +199,20 @@ function PronoForm({ currentEmbed, formMode, onChange }) {
 
       {/* Équipes */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">
+        <label className="block text-sm font-medium text-ink mb-3">
           Équipes *
         </label>
-        <div className="bg-gray-50 border border-gray-300 p-4 rounded-md space-y-4">
+        <div className="bg-ground border border-line p-4 rounded-md space-y-4">
           {/* LIGNE 1 : Équipe 1 */}
           <div className="flex gap-4 items-end">
             <div className="w-[70%]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-muted mb-1">
                 Équipe 1 *
               </label>
               <select
                 value={item1Name}
                 onChange={(e) => handleTeamChange(e.target.value, setItem1Name, setItem1Color)}
-                className={`field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!item1Name ? 'text-gray-400' : 'text-gray-700'}`}
+                className={`field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer ${!item1Name ? 'text-muted' : 'text-ink'}`}
                 required
               >
                 <option value="" disabled hidden>Sélectionner une équipe</option>
@@ -224,7 +224,7 @@ function PronoForm({ currentEmbed, formMode, onChange }) {
               </select>
             </div>
             <div className="w-[30%]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-muted mb-1">
                 Couleur de la barre
               </label>
               <div className="flex items-center gap-2 h-10">
@@ -232,9 +232,9 @@ function PronoForm({ currentEmbed, formMode, onChange }) {
                   type="color"
                   value={item1Color}
                   onChange={(e) => setItem1Color(e.target.value)}
-                  className="h-10 w-10 p-1 border border-gray-300 rounded cursor-pointer bg-white"
+                  className="h-10 w-10 p-1 border border-line rounded cursor-pointer bg-surface"
                 />
-                <span className="text-xs text-gray-500">{item1Color}</span>
+                <span className="text-xs text-muted">{item1Color}</span>
               </div>
             </div>
           </div>
@@ -242,13 +242,13 @@ function PronoForm({ currentEmbed, formMode, onChange }) {
           {/* LIGNE 2 : Équipe 2 */}
           <div className="flex gap-4 items-end">
             <div className="w-[70%]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-muted mb-1">
                 Équipe 2 *
               </label>
               <select
                 value={item2Name}
                 onChange={(e) => handleTeamChange(e.target.value, setItem2Name, setItem2Color)}
-                className={`field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!item2Name ? 'text-gray-400' : 'text-gray-700'}`}
+                className={`field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer ${!item2Name ? 'text-muted' : 'text-ink'}`}
                 required
               >
                 <option value="" disabled hidden>Sélectionner une équipe</option>
@@ -260,7 +260,7 @@ function PronoForm({ currentEmbed, formMode, onChange }) {
               </select>
             </div>
             <div className="w-[30%]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-muted mb-1">
                 Couleur de la barre
               </label>
               <div className="flex items-center gap-2 h-10">
@@ -268,9 +268,9 @@ function PronoForm({ currentEmbed, formMode, onChange }) {
                   type="color"
                   value={item2Color}
                   onChange={(e) => setItem2Color(e.target.value)}
-                  className="h-10 w-10 p-1 border border-gray-300 rounded cursor-pointer bg-white"
+                  className="h-10 w-10 p-1 border border-line rounded cursor-pointer bg-surface"
                 />
-                <span className="text-xs text-gray-500">{item2Color}</span>
+                <span className="text-xs text-muted">{item2Color}</span>
               </div>
             </div>
           </div>

@@ -194,18 +194,20 @@ function TeamEditor({ isOpen, teamId, onClose }) {
       */}
       <div
         id="team-editor"
-        className={`max-w-4xl w-full h-auto overflow-y-auto fixed top-1/2 left-1/2 max-h-[80vh] bg-white rounded-xl shadow-lg z-40 flex flex-col -translate-x-1/2 transition-all duration-150 ease-in-out ${
+        className={`max-w-4xl w-full h-auto overflow-y-auto fixed top-1/2 left-1/2 max-h-[80vh] bg-surface border border-line rounded-lg shadow-pop z-40 flex flex-col -translate-x-1/2 transition-all duration-150 ease-in-out ${
           isOpen
             ? 'opacity-100 visible -translate-y-1/2'
             : 'opacity-0 invisible translate-y-[calc(-50%+40px)]'
         }`}
       >
         {/* En-tête, calqué sur celui du formulaire de widget */}
-        <div className="flex justify-between items-center px-6 py-4 bg-gray-200 border-b border-gray-300 rounded-t-xl">
-          <h2 className="text-xl font-bold text-gray-800">Éditer les effectifs</h2>
+        <div className="flex justify-between items-center pl-6 pr-3 py-2 border-b border-line">
+          <h2 className="title-lg text-ink m-0">Éditer les effectifs</h2>
           <button
             onClick={() => onClose(false)}
-            className="text-gray-500 hover:text-gray-700 text-2xl font-semibold transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-pill text-muted hover:text-ink hover:bg-ground text-2xl transition-colors"
+            type="button"
+            aria-label="Fermer"
             title="Fermer"
             disabled={saving}
           >
@@ -217,12 +219,12 @@ function TeamEditor({ isOpen, teamId, onClose }) {
           <div className="space-y-6">
             <div>
               <div className="flex items-baseline justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">Équipe *</label>
+                <label className="block text-sm font-medium text-ink">Équipe *</label>
                 {draftName === null && (
                   <button
                     type="button"
                     onClick={() => { setDraftName(''); setError(''); }}
-                    className="text-blick hover:underline text-sm font-medium cursor-pointer"
+                    className="text-accent hover:underline text-sm font-medium cursor-pointer"
                   >
                     + Nouvelle équipe
                   </button>
@@ -233,13 +235,13 @@ function TeamEditor({ isOpen, teamId, onClose }) {
                 <select
                   value={activeId}
                   onChange={(e) => setActiveId(e.target.value)}
-                  className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+                  className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer"
                 >
                   {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               ) : (
                 draftName === null && (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted">
                     Aucune équipe pour l’instant. Créez-en une pour commencer.
                   </p>
                 )
@@ -247,8 +249,8 @@ function TeamEditor({ isOpen, teamId, onClose }) {
             </div>
 
             {draftName !== null && (
-              <div className="p-4 bg-gray-50 border border-gray-300 rounded-md">
-                <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+              <div className="p-4 bg-ground border border-line rounded-md">
+                <label className="flex items-center text-sm font-medium text-ink mb-2">
                   Nom de la nouvelle équipe
                   <FieldHint text="Le nom est le seul critère de distinction : donnez-en un sans ambiguïté, sport et genre compris." />
                 </label>
@@ -259,14 +261,14 @@ function TeamEditor({ isOpen, teamId, onClose }) {
                     onChange={(e) => setDraftName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); createTeam(); } }}
                     placeholder="Suisse M – Football"
-                    className="field mb-0 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="field mb-0 flex-1 px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                   />
                   <button
                     type="button"
                     onClick={createTeam}
                     disabled={saving}
                     title="Créer l’équipe"
-                    className="bg-white text-gray-600 border border-gray-300 w-12 h-12 rounded-md flex items-center justify-center hover:bg-gray-50 hover:text-gray-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex-none"
+                    className="bg-surface text-muted border border-line w-12 h-12 rounded-md flex items-center justify-center hover:bg-ground hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex-none"
                   >
                     <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
                       <path d="M12 5v14M5 12h14" />
@@ -284,14 +286,14 @@ function TeamEditor({ isOpen, teamId, onClose }) {
 
             {meta && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Joueurs</label>
+                <label className="block text-sm font-medium text-ink mb-3">Joueurs</label>
 
                 {loading ? (
-                  <p className="text-sm text-gray-500 py-6 text-center">Chargement…</p>
+                  <p className="text-sm text-muted py-6 text-center">Chargement…</p>
                 ) : (
                   <>
                     {players.length === 0 && (
-                      <p className="text-center text-sm text-gray-400 py-8">
+                      <p className="text-center text-sm text-muted py-8">
                         Cette équipe n’a encore aucun joueur.
                       </p>
                     )}
@@ -300,7 +302,7 @@ function TeamEditor({ isOpen, teamId, onClose }) {
                       {players.map((player) => (
                         <div
                           key={player.id}
-                          className={`flex items-center gap-3 rounded-md px-3 py-2 bg-gray-100 ${
+                          className={`flex items-center gap-3 rounded-md px-3 py-2 bg-ground ${
                             player.archived ? 'opacity-60' : ''
                           }`}
                         >
@@ -318,12 +320,12 @@ function TeamEditor({ isOpen, teamId, onClose }) {
                             type="text"
                             value={player.name}
                             onChange={(e) => updatePlayer(player.id, 'name', e.target.value)}
-                            className="flex-1 min-w-0 bg-transparent px-2 py-1 text-sm font-medium text-gray-800 rounded border border-transparent hover:border-gray-300 focus:bg-white focus:border-blue-400 focus:outline-none transition-colors"
+                            className="flex-1 min-w-0 bg-transparent px-2 py-1 text-sm font-medium text-ink rounded border border-transparent hover:border-line focus:bg-surface focus:border-accent focus:outline-none transition-colors"
                           />
                           <button
                             type="button"
                             onClick={() => toggleArchived(player.id)}
-                            className="text-xs text-gray-500 hover:text-gray-800 shrink-0 cursor-pointer"
+                            className="text-xs text-muted hover:text-ink shrink-0 cursor-pointer"
                           >
                             {player.archived ? 'Réactiver' : 'Archiver'}
                           </button>
@@ -332,7 +334,7 @@ function TeamEditor({ isOpen, teamId, onClose }) {
                     </div>
 
                     <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Ajouter un joueur</label>
+                      <label className="block text-sm font-medium text-ink mb-2">Ajouter un joueur</label>
                       <div className="flex gap-3 items-center">
                         <PortraitUploader
                           value={newPortrait}
@@ -348,13 +350,13 @@ function TeamEditor({ isOpen, teamId, onClose }) {
                           onChange={(e) => setNewName(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPlayer(); } }}
                           placeholder="Nom du joueur ou de la joueuse"
-                          className="field mb-0 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          className="field mb-0 flex-1 px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                         />
                         <button
                           type="button"
                           onClick={addPlayer}
                           title="Ajouter ce joueur à l’équipe"
-                          className="bg-white text-gray-600 border border-gray-300 w-12 h-12 rounded-md flex items-center justify-center hover:bg-gray-50 hover:text-gray-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex-none"
+                          className="bg-surface text-muted border border-line w-12 h-12 rounded-md flex items-center justify-center hover:bg-ground hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex-none"
                         >
                           <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
                             <path d="M12 5v14M5 12h14" />
@@ -372,14 +374,14 @@ function TeamEditor({ isOpen, teamId, onClose }) {
           <div className="flex justify-end gap-2 mt-6">
             <button
               onClick={() => onClose(false)}
-              className="w-1/2 px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              className="w-1/2 h-11 px-4 text-ink font-medium bg-surface border border-line rounded-pill hover:bg-ground"
               disabled={saving || isSuccess}
             >
               Annuler
             </button>
             <button
               onClick={handleSave}
-              className={`w-1/2 rounded-md font-bold transition-all duration-300 ${
+              className={`w-1/2 h-11 rounded-pill font-semibold transition-all duration-300 ${
                 isSuccess ? 'text-white border-green-600' : 'btn-primary'
               }`}
               style={isSuccess

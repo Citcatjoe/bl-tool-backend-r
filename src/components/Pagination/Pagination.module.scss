@@ -1,78 +1,56 @@
-@import '../../styles/_variables';
-
 .paginationContainer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
   user-select: none;
 }
 
-.navButton {
-  height: 36px;
-  padding: 0 12px;
-  display: flex;
+.navButton,
+.pageButton {
+  min-width: 44px;
+  height: 44px;
+  padding: 0 16px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  background-color: #ffffff;
-  color: #374151;
-  font-size: 14px;
+  box-sizing: border-box;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background-color: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
-  font-family: Inter, sans-serif;
 
   &:hover:not(:disabled) {
-    background-color: #f3f4f6;
-    border-color: #9ca3af;
-  }
-
-  &:disabled {
-    background-color: transparent;
-    border-color: #e5e7eb;
-    opacity: 0.5;
-    cursor: not-allowed;
+    background-color: var(--ground);
   }
 }
 
-.pageButton {
-  height: 36px;
-  min-width: 36px;
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  background-color: #ffffff;
-  color: #374151;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-  font-family: Inter, sans-serif;
+.navButton:disabled {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  cursor: not-allowed;
+}
 
-  &:hover {
-    background-color: #f3f4f6;
-    border-color: #9ca3af;
-  }
-
-  &.active {
-    border-color: $blick;
-    background-color: $blick;
-    color: #ffffff;
-    font-family: "blickextrabold", sans-serif;
-  }
+.pageButton.active,
+.pageButton.active:hover {
+  border-color: var(--accent);
+  background-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
 }
 
 .ellipsis {
-  height: 36px;
-  width: 32px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #4b5563;
-  font-weight: 700;
-  font-size: 14px;
+  color: var(--muted);
+  font-size: 15px;
 }

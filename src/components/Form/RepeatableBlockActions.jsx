@@ -2,8 +2,8 @@ import React from 'react';
 
 function RepeatableBlockActions({ index, total, onMoveUp, onMoveDown, onRemove, title, allowRemoveAll = false }) {
   return (
-    <div className="flex justify-between items-center bg-gray-200 px-4 h-10 border-b border-gray-300">
-      <h4 className="font-semibold text-sm text-gray-700 select-none m-0">
+    <div className="flex justify-between items-center bg-accent-soft px-4 h-10 border-b border-line">
+      <h4 className="font-semibold text-sm text-ink select-none m-0">
         {title || `Élément ${index + 1}`}
       </h4>
       <div className="flex gap-1">
@@ -12,7 +12,7 @@ function RepeatableBlockActions({ index, total, onMoveUp, onMoveDown, onRemove, 
             type="button"
             onClick={() => onMoveUp(index)}
             disabled={index === 0}
-            className="h-6 w-6 text-xs text-gray-600 bg-white hover:text-blue-600 hover:border-blue-300 disabled:opacity-40 disabled:hover:border-gray-300 disabled:hover:text-gray-600 disabled:cursor-not-allowed flex items-center justify-center border border-gray-300 rounded shadow-sm transition-colors"
+            className="h-6 w-6 text-xs text-muted bg-surface hover:text-accent hover:border-accent disabled:opacity-40 disabled:hover:border-line disabled:hover:text-muted disabled:cursor-not-allowed flex items-center justify-center border border-line rounded transition-colors"
             title="Monter"
           >
             ▲
@@ -23,7 +23,7 @@ function RepeatableBlockActions({ index, total, onMoveUp, onMoveDown, onRemove, 
             type="button"
             onClick={() => onMoveDown(index)}
             disabled={index === total - 1}
-            className="h-6 w-6 text-xs text-gray-600 bg-white hover:text-blue-600 hover:border-blue-300 disabled:opacity-40 disabled:hover:border-gray-300 disabled:hover:text-gray-600 disabled:cursor-not-allowed flex items-center justify-center border border-gray-300 rounded shadow-sm transition-colors"
+            className="h-6 w-6 text-xs text-muted bg-surface hover:text-accent hover:border-accent disabled:opacity-40 disabled:hover:border-line disabled:hover:text-muted disabled:cursor-not-allowed flex items-center justify-center border border-line rounded transition-colors"
             title="Descendre"
           >
             ▼
@@ -33,7 +33,7 @@ function RepeatableBlockActions({ index, total, onMoveUp, onMoveDown, onRemove, 
           <button
             type="button"
             onClick={() => onRemove(index)}
-            className="h-6 w-6 text-xs text-red-500 bg-white hover:text-white hover:bg-red-500 hover:border-red-500 flex items-center justify-center border border-red-200 rounded shadow-sm transition-colors ml-2"
+            className="h-6 w-6 text-xs text-red-500 bg-surface hover:text-white hover:bg-red-500 hover:border-red-500 flex items-center justify-center border border-red-200 rounded transition-colors ml-2"
             title="Supprimer"
           >
             ×

@@ -1,0 +1,64 @@
+/* Sidekick — tokens d'identité. Copie de tokens.css (guide Sidekick).
+   Polices Space Grotesk + Inter : chargées par <link> dans index.html. */
+:root {
+  /* Couleurs */
+  --ink: #10142B;            /* texte principal, anneau du logo, fonds sombres */
+  --muted: #565C78;          /* texte secondaire */
+  --accent: #2B4EFF;         /* cobalt : actions principales, état actif */
+  --on-accent: #FFFFFF;      /* texte et icônes sur accent ou ink */
+  --accent-soft: #E8ECFF;    /* étiquettes, tuiles d'icônes, encarts */
+  --accent-on-dark: #8FA2FF; /* accent sur fond ink uniquement */
+  --ground: #F4F5FA;         /* fond du panneau */
+  --surface: #FFFFFF;        /* cartes, champs, en-tête */
+  --line: #DFE2EE;           /* bordures 1px */
+
+  /* Typographie */
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-sans: Inter, system-ui, sans-serif;
+
+  /* Espacements */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-10: 40px;
+
+  /* Rayons */
+  --radius-sm: 6px;   /* étiquettes */
+  --radius-md: 10px;  /* champs de formulaire */
+  --radius-lg: 12px;  /* cartes, tuiles d'icônes, champs de la barre d'outils */
+
+  /* Bordure des champs interactifs (contraste 3:1 sur surface) */
+  --line-strong: #8A91B4;
+  /* Bandeaux : en-tête de tableau, barre de pagination */
+  --band: #ECEEF7;
+  /* Boutons en pastille */
+  --radius-pill: 999px;
+
+  /* Ombres : trois usages seulement */
+  --shadow-card: 0 1px 2px rgba(16, 20, 43, 0.05), 0 8px 24px rgba(16, 20, 43, 0.06);   /* tableau, cartes principales */
+  --shadow-pop: 0 4px 8px rgba(16, 20, 43, 0.06), 0 16px 40px rgba(16, 20, 43, 0.16);   /* menus contextuels, modales */
+  --shadow-fab: 0 6px 16px rgba(43, 78, 255, 0.32);                                      /* pastille « Créer un widget » */
+
+  /* Étiquettes de type : fond pâle + texte foncé de la même famille */
+  --type-sondage-bg: #DCE8FF; --type-sondage-fg: #1740A8;  /* Sondage */
+  --type-calendrier-bg: #D9F2E3; --type-calendrier-fg: #0F6B3C;  /* Calendrier */
+  --type-teaser-bg: #FFF3B0; --type-teaser-fg: #6B5400;  /* Teaser */
+  --type-dossier-bg: #E3E0FF; --type-dossier-fg: #3F2FA8;  /* Dossier */
+  --type-tinder-bg: #FFE0EC; --type-tinder-fg: #A31551;  /* Tinder */
+  --type-quiz-bg: #F1DEFF; --type-quiz-fg: #6D21A8;  /* Quiz */
+  --type-temoignage-bg: #D3F3F0; --type-temoignage-fg: #0B6660;  /* Témoignage */
+  --type-potm-bg: #FFD9C7; --type-potm-fg: #9C3A0A;  /* Joueur du match */
+  --type-prono-bg: #FFDEDE; --type-prono-fg: #A31B1B;  /* Pronostic */
+  --type-facts-bg: #E6E8F0; --type-facts-fg: #3A4060;  /* Faits marquants */
+  --type-natinotes-bg: #FFE2B8; --type-natinotes-fg: #8A4B00;  /* NatiNotes */
+}
+
+.title-lg { font: 600 24px/30px var(--font-display); letter-spacing: -0.01em; }
+.title-md { font: 600 18px/24px var(--font-display); }
+.title-sm { font: 600 15px/20px var(--font-display); }
+.row-title { font: 700 16px/22px var(--font-display); letter-spacing: -0.01em; }
+.body     { font: 400 15px/22px var(--font-sans); }
+.body-sm  { font: 400 13px/18px var(--font-sans); }
+.label    { font: 600 11px/14px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; }

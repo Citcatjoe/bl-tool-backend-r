@@ -131,7 +131,7 @@ function ImageUploader({ initialUrl = '', oldUrl = '', label = 'Image', disabled
 
 	return (
 			<div>
-				<label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="image-upload-input">{label}</label>
+				<label className="block text-sm font-medium text-ink mb-2" htmlFor="image-upload-input">{label}</label>
 				<input
 					ref={inputRef}
 					id="image-upload-input"
@@ -143,7 +143,7 @@ function ImageUploader({ initialUrl = '', oldUrl = '', label = 'Image', disabled
 				/>
 				<button
 					type="button"
-					className="btn-secondary inline-block w-48 mb-0 px-3 py-2 border border-blick rounded-md focus:outline-none text-blick font-semibold cursor-pointer text-center"
+					className="btn-secondary inline-block w-48 mb-0 px-3 py-2 border border-accent rounded-md focus:outline-none text-accent font-semibold cursor-pointer text-center"
 					style={{ userSelect: 'none' }}
 					disabled={disabled || uploading}
 					onClick={() => inputRef.current && inputRef.current.click()}
@@ -153,9 +153,9 @@ function ImageUploader({ initialUrl = '', oldUrl = '', label = 'Image', disabled
 				{uploadError && <p className="text-xs text-red-500 mt-2">{uploadError}</p>}
 						{img && (
 							<div className="mt-2">
-								<p className="text-xs text-gray-500 mb-1">Image actuelle</p>
+								<p className="text-xs text-muted mb-1">Image actuelle</p>
 								<div className="relative inline-block">
-									<img src={img} alt="Upload" className="max-h-32 rounded shadow" />
+									<img src={img} alt="Upload" className="max-h-32 rounded " />
 									<button
 										type="button"
 										className="absolute top-1 right-1 btn-form btn-delete"

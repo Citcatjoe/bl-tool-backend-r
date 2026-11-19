@@ -1,22 +1,18 @@
 @import './styles/_variables';
-@import './styles/_fonts';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
-
-
-
-:root 
+:root
 {
-    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    font-family: var(--font-sans);
     font-synthesis: none;
-      
+    color: var(--ink);
+    accent-color: var(--accent); // cases à cocher, radios natifs
 }
 
-html 
+html
 {
     font-size: 16px;
     line-height: 1.5;
@@ -28,6 +24,7 @@ html
 body
 {
   height: 100%;
+  background-color: var(--ground);
 }
 
 #root
@@ -35,119 +32,38 @@ body
   height: 100%;
 }
 
-.App 
+.App
 {
     width: 100%;
     height: 100%
 }
 
-
-
-
-// menu action
-// .menu-actions
-// {
-//   button 
-//   {
-//     img 
-//     {
-//       opacity: .3
-//     }
-//   }
-// }
-
-
-
-// CUSTOM CLASSES
-.border-blick {
-  border-color: $blick;
-}
-
-.text-blick
+// Focus visible en accent sur tout élément interactif (cf. guide Sidekick).
+:focus-visible
 {
-    color: #E2271B;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
-
-.bg-blick
-{
-    background-color: #E2271B;
-}
-
-
-// STATES
-
 
 @layer components {
 
-  .label {
-    @apply block text-base text-black font-normal mb-2;
-  } 
-
   .minilabel {
-    @apply block text-sm text-black mb-2;
+    @apply block text-[13px] leading-[18px] font-semibold text-ink mb-2;
   }
 
   .field {
-    @apply w-full h-12 rounded-md border px-4 mb-6;
+    @apply w-full h-11 rounded-md border border-line-strong bg-surface text-ink px-4 mb-6;
   }
 
-}
-
-// COMPONENTS???
-#menu-new
-{
-  #menu-new-btn
-  {
-    width: 56px !important;
-    height: 56px !important;
-    padding: 0 !important;
-    border: none !important;
-    aspect-ratio: 1 / 1 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-
-    &:hover
-    {
-      background-color: darken($blick, 5%);
-    }
-  }
-
-  #menu-new-items
-  {
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.15s ease-in-out;
-    transform: translateY(-10px);
-
-    &.isVisible
-    {
-      opacity: 1;
-      visibility: visible;
-      transition: all 0.15s ease-in-out;
-      transform: translateY(2%);
-    }
-  }
 }
 
 #menu-actions
 {
-  #menu-actions-btn
-  { 
-    //  img
-    //  {
-    //    opacity: .3;
-    //  }
-
-      
-  }
-
   #menu-actions-items
   {
     opacity: 0;
     visibility: hidden;
     transition: all 0.15s ease-in-out;
-    // transform: translateY(-100%);
     transform: translateX(10px);
 
     &.isVisible
@@ -160,61 +76,39 @@ body
   }
 }
 
-// .elem-list-item {
-
-//     &:hover
-//     {
-//         #menu-actions-btn
-//         {
-          
-//                 img
-//                 {
-//                     opacity: 1 !important;
-//                 }
-           
-//         }
-//     }
-
-// }
-
 .btn-primary
 {
-    background-color: $blick;
-    font-family: Inter;
-    color: #fff;
-    border-radius: 4px;
+    background-color: var(--accent);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    color: var(--on-accent);
+    border-radius: var(--radius-pill);
     cursor: pointer;
     transition: background 0.2s;
-    
 
     &:hover
     {
-        background-color: darken($blick, 5%);
+        background-color: color-mix(in srgb, var(--accent) 88%, var(--ink));
     }
 }
 
 .btn-secondary
 {
-    //font-family: Inter;
-    //font-size: 16px;
-    //color: $blick;
     cursor: pointer;
     transition: background 0.2s;
-    font-weight: 00;
-    font-family: Inter;
-    font-weight: 400;
+    font-family: var(--font-sans);
+    font-weight: 500;
 
     &:hover
     {
-        background-color: lighten($blick, 52%);
+        background-color: var(--ground);
     }
 }
 
 .btn-form
 {
-    background: white;
-    //border: 1px solid #D1D5DB;
-    color: rgb(118, 118, 118);
+    background: var(--surface);
+    color: var(--muted);
     font-size: 1rem;
     padding: 0;
     aspect-ratio: 1 / 1;
@@ -227,24 +121,18 @@ body
 
     &:disabled
     {
-        color: rgb(118, 118, 118, .4);
+        opacity: .4;
         cursor: not-allowed;
     }
 
     &:hover
     {
-        background: darken(white, 5%);
+        background: var(--ground);
     }
 
     &.btn-delete
     {
-        color: $blick;
-        //background: $blick; // rouge
-
-        // &:hover
-        // {
-        //     background: darken($blick, 5%);
-        // }
+        color: var(--ink);
     }
 }
 
@@ -253,12 +141,16 @@ body
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  // Taille fixe : dans une cellule étroite (colonne « Inter. »), un élément flex
+  // rétrécit par défaut et le cercle devenait ovale.
+  flex: none;
+  box-sizing: border-box;
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  border: 1px solid #d1d5db;
-  background-color: #f3f4f6;
-  color: #9ca3af;
+  border: 1px solid var(--line);
+  background-color: var(--ground);
+  color: var(--muted);
   font-size: 8.5px;
   font-weight: bold;
   font-style: normal;
@@ -271,9 +163,9 @@ body
   text-decoration: none !important;
 
   &:hover {
-    border-color: #E2271B; /* $blick */
-    color: #E2271B;
-    background-color: rgba(226, 39, 27, 0.05);
+    border-color: var(--accent);
+    color: var(--accent);
+    background-color: var(--accent-soft);
 
     .tooltip-content {
       opacity: 1;
@@ -287,16 +179,13 @@ body
     bottom: 100%;
     left: 50%;
     transform: translate(-50%, 0);
-    background-color: rgba(31, 41, 55, 0.95);
-    backdrop-filter: blur(8px);
-    color: #fff;
+    background-color: var(--ink);
+    color: var(--on-accent);
     font-size: 11px;
     font-weight: normal;
     padding: 6px 10px;
     border-radius: 6px;
     white-space: nowrap;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -313,7 +202,7 @@ body
       transform: translateX(-50%);
       border-width: 5px;
       border-style: solid;
-      border-color: rgba(31, 41, 55, 0.95) transparent transparent transparent;
+      border-color: var(--ink) transparent transparent transparent;
     }
   }
 
@@ -339,7 +228,3 @@ body
     transform: translate(0, -8px);
   }
 }
-
-
-
-

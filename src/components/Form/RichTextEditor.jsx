@@ -76,13 +76,13 @@ function RichTextEditor({ value, onChange, placeholder, className, stripPTags = 
   };
 
   return (
-    <div className={`rich-text-editor-wrapper bg-white rounded-md border border-gray-300 overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 ${className || ''}`}>
+    <div className={`rich-text-editor-wrapper bg-surface rounded-md border border-line overflow-hidden focus-within:ring-2 focus-within:ring-accent focus-within:border-accent ${className || ''}`}>
       <style>{`
         .rich-text-editor-wrapper .ql-toolbar.ql-snow {
           border: none;
-          border-bottom: 1px solid #d1d5db;
+          border-bottom: 1px solid var(--line);
           padding: 8px;
-          background: #f9fafb;
+          background: var(--ground);
         }
         .rich-text-editor-wrapper .ql-container.ql-snow {
           border: none;
@@ -94,7 +94,7 @@ function RichTextEditor({ value, onChange, placeholder, className, stripPTags = 
           min-height: 100px;
         }
         .rich-text-editor-wrapper .ql-editor a {
-          color: #e20000;
+          color: var(--accent);
           font-weight: 700;
           text-decoration: underline;
         }

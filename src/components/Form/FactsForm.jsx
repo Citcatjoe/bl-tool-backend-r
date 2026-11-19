@@ -154,7 +154,7 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
       <div className="flex gap-6 items-start">
         {/* Brand */}
         <div className="flex-none w-44">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Brand
           </label>
           <div className="flex gap-4 items-center h-12">
@@ -165,9 +165,9 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
                 value="blick"
                 checked={brand === 'blick'}
                 onChange={() => setBrand('blick')}
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                className="w-4 h-4 text-accent border-line focus:ring-accent cursor-pointer"
               />
-              <span className="text-sm text-gray-700">Blick</span>
+              <span className="text-sm text-ink">Blick</span>
             </label>
             <label className="flex items-center gap-2 cursor-not-allowed opacity-50 select-none" title="Le module de faits marquants n'est pas encore compatible avec la brand PME.">
               <input
@@ -177,49 +177,49 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
                 checked={brand === 'pme'}
                 onChange={() => setBrand('pme')}
                 disabled
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-not-allowed"
+                className="w-4 h-4 text-accent border-line focus:ring-accent cursor-not-allowed"
               />
-              <span className="text-sm text-gray-400">Pme</span>
+              <span className="text-sm text-muted">Pme</span>
             </label>
           </div>
         </div>
 
         {/* Rubrique */}
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Rubrique *
           </label>
           <select
             value={theme || ''}
             onChange={(e) => setTheme(e.target.value || null)}
-            className={`field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!theme ? 'text-gray-400' : 'text-gray-700'
+            className={`field mb-0 w-full px-3 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer ${!theme ? 'text-muted' : 'text-ink'
               }`}
             required
           >
             <option value="" disabled hidden>Sélectionner...</option>
-            <option value="Suisse" className="text-gray-700">Suisse</option>
-            <option value="Inter" className="text-gray-700">Inter</option>
-            <option value="Sport" className="text-gray-700">Sport</option>
+            <option value="Suisse" className="text-ink">Suisse</option>
+            <option value="Inter" className="text-ink">Inter</option>
+            <option value="Sport" className="text-ink">Sport</option>
           </select>
         </div>
       </div>
 
       <div className="py-4">
-        <hr className="border-gray-200" />
+        <hr className="border-line" />
       </div>
 
       {/* Section 1: Rencontre et Date */}
       <div className="flex gap-4">
         {/* Rencontre */}
         <div className="w-1/2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Rencontre *
           </label>
           <input
             type="text"
             value={rencontre}
             onChange={(e) => setRencontre(e.target.value)}
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
             placeholder="Ajoie - Lausanne"
             required
           />
@@ -227,14 +227,14 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
 
         {/* Date */}
         <div className="w-1/2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Date *
           </label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+            className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer"
             required
           />
         </div>
@@ -242,13 +242,13 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
 
       {/* Section 2: Items */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">
+        <label className="block text-sm font-medium text-ink mb-3">
           Faits marquants *
         </label>
         <div>
           <div className="space-y-4">
             {items.map((item, index) => (
-              <div key={item.id} className="bg-gray-50 border border-gray-300 rounded-md overflow-hidden">
+              <div key={item.id} className="bg-ground border border-line rounded-md overflow-hidden">
                 
                 <RepeatableBlockActions 
                   index={index}
@@ -263,11 +263,11 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
                 {/* Line 1 - Type & Icons */}
                 <div className="flex gap-4 mb-3">
                   <div className={item.type === 'rating' ? 'w-full' : 'w-1/2'}>
-                     <label className="block text-xs font-medium text-gray-500 mb-1">Type *</label>
+                     <label className="block text-xs font-medium text-muted mb-1">Type *</label>
                      <select
                         value={item.type}
                         onChange={(e) => handleTypeChange(index, e.target.value)}
-                        className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+                        className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer"
                      >
                        <option value="normal">Normal</option>
                        <option value="quote">Citation</option>
@@ -278,14 +278,14 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
                   </div>
                   {item.type !== 'rating' && (
                     <div className="w-1/2">
-                     <label className="block text-xs font-medium text-gray-500 mb-1">Icône</label>
+                     <label className="block text-xs font-medium text-muted mb-1">Icône</label>
                      <div className="flex flex-wrap gap-2">
                        {factsIcons.map(icon => (
                           <button
                             key={icon.id}
                             type="button"
                             onClick={() => handleItemChange(index, 'icon', icon.id)}
-                            className={`w-[48px] h-[48px] p-2 border rounded-md transition-colors flex items-center justify-center ${item.icon === icon.id ? 'border-[#e20000] bg-[#e20000]/10 text-[#e20000]' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
+                            className={`w-[48px] h-[48px] p-2 border rounded-md transition-colors flex items-center justify-center ${item.icon === icon.id ? 'border-accent bg-accent-soft text-accent' : 'border-line bg-surface text-muted hover:bg-ground hover:text-ink'}`}
                             title={icon.name}
                             dangerouslySetInnerHTML={{ __html: icon.svg }}
                           />
@@ -297,14 +297,14 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
 
                  {/* Line 2 - Titre */}
                 <div className="mb-3">
-                     <label className="block text-xs font-medium text-gray-500 mb-1">
+                     <label className="block text-xs font-medium text-muted mb-1">
                        {item.type === 'rating' ? 'Question posée *' : 'Titre *'}
                      </label>
                      <input
                         type="text"
                         value={item.title}
                         onChange={(e) => handleItemChange(index, 'title', e.target.value)}
-                        className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                         placeholder={item.type === 'rating' ? "Qui a été le meilleur joueur?" : "L'action de la soirée"}
                         required
                      />
@@ -313,7 +313,7 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
                 {/* Line 2 */}
                 {item.type !== 'number' && item.type !== 'rating' && (
                   <div>
-                     <label className="block text-xs font-medium text-gray-500 mb-1">
+                     <label className="block text-xs font-medium text-muted mb-1">
                        {item.type === 'quote' ? 'Citation *' : 'Contenu *'}
                      </label>
                      <RichTextEditor
@@ -329,12 +329,12 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
                 {item.type === 'quote' && (
                   <div className="mt-4 space-y-4">
                      <div>
-                       <label className="block text-xs font-medium text-gray-500 mb-1">Auteur de la citation *</label>
+                       <label className="block text-xs font-medium text-muted mb-1">Auteur de la citation *</label>
                        <input
                           type="text"
                           value={item.author || ''}
                           onChange={(e) => handleItemChange(index, 'author', e.target.value)}
-                          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                           placeholder="– Geoff Ward, entraîneur du LHC"
                           required
                        />
@@ -354,12 +354,12 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
                 {item.type === 'picture' && (
                   <div className="mt-4 space-y-4">
                      <div>
-                       <label className="block text-xs font-medium text-gray-500 mb-1">Crédit *</label>
+                       <label className="block text-xs font-medium text-muted mb-1">Crédit *</label>
                        <input
                           type="text"
                           value={item.caption || ''}
                           onChange={(e) => handleItemChange(index, 'caption', e.target.value)}
-                          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                           placeholder="Photo: Getty Images"
                           required
                        />
@@ -379,23 +379,23 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
                 {item.type === 'number' && (
                   <div className="flex gap-4 mt-3">
                      <div className="w-1/4">
-                       <label className="block text-xs font-medium text-gray-500 mb-1">Le chiffre *</label>
+                       <label className="block text-xs font-medium text-muted mb-1">Le chiffre *</label>
                        <input
                           type="number"
                           value={item.value !== undefined ? item.value : ''}
                           onChange={(e) => handleItemChange(index, 'value', e.target.value ? parseInt(e.target.value, 10) : '')}
-                          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                           placeholder="16"
                           required
                        />
                      </div>
                      <div className="w-3/4">
-                       <label className="block text-xs font-medium text-gray-500 mb-1">Description *</label>
+                       <label className="block text-xs font-medium text-muted mb-1">Description *</label>
                        <input
                           type="text"
                           value={item.text || ''}
                           onChange={(e) => handleItemChange(index, 'text', e.target.value)}
-                          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                           placeholder="Le nombre de minutes jouées..."
                           required
                        />
@@ -409,7 +409,7 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
           <button
             type="button"
             onClick={handleAddItem}
-            className="text-blick hover:underline text-sm mt-4 font-medium flex items-center"
+            className="text-accent hover:underline text-sm mt-4 font-medium flex items-center"
           >
             + Ajouter un fait marquant
           </button>

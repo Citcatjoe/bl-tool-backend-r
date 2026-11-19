@@ -107,7 +107,7 @@ function PollForm({ currentEmbed, formMode, onChange }) {
       <div className="flex gap-6 items-start">
         {/* Brand */}
         <div className="flex-none w-44">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Brand
           </label>
           <div className="flex gap-4 items-center h-12">
@@ -118,9 +118,9 @@ function PollForm({ currentEmbed, formMode, onChange }) {
                 value="blick"
                 checked={brand === 'blick'}
                 onChange={() => setBrand('blick')}
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                className="w-4 h-4 text-accent border-line focus:ring-accent cursor-pointer"
               />
-              <span className="text-sm text-gray-700">Blick</span>
+              <span className="text-sm text-ink">Blick</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
@@ -129,40 +129,40 @@ function PollForm({ currentEmbed, formMode, onChange }) {
                 value="pme"
                 checked={brand === 'pme'}
                 onChange={() => setBrand('pme')}
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                className="w-4 h-4 text-accent border-line focus:ring-accent cursor-pointer"
               />
-              <span className="text-sm text-gray-700">Pme</span>
+              <span className="text-sm text-ink">Pme</span>
             </label>
           </div>
         </div>
 
         {/* Rubrique */}
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Rubrique *
           </label>
           <select
             value={theme || ''}
             onChange={(e) => setTheme(e.target.value || null)}
-            className={`field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!theme ? 'text-gray-400' : 'text-gray-700'
+            className={`field mb-0 w-full px-3 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer ${!theme ? 'text-muted' : 'text-ink'
               }`}
             required
           >
             <option value="" disabled hidden>Sélectionner...</option>
-            <option value="Suisse" className="text-gray-700">Suisse</option>
-            <option value="Inter" className="text-gray-700">Inter</option>
-            <option value="Sport" className="text-gray-700">Sport</option>
+            <option value="Suisse" className="text-ink">Suisse</option>
+            <option value="Inter" className="text-ink">Inter</option>
+            <option value="Sport" className="text-ink">Sport</option>
           </select>
         </div>
       </div>
 
       <div className="py-4">
-        <hr className="border-gray-200" />
+        <hr className="border-line" />
       </div>
 
       {/* Question du sondage */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-ink mb-2">
           Question du sondage *
         </label>
         <input
@@ -170,19 +170,19 @@ function PollForm({ currentEmbed, formMode, onChange }) {
           value={pollTxt}
           onChange={(e) => setPollTxt(e.target.value)}
           placeholder="Êtes-vous favorable à la semaine de 4 jours en Suisse ?"
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
           required
         />
       </div>
 
       {/* Réponses possibles */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">
+        <label className="block text-sm font-medium text-ink mb-3">
           Réponses possibles *
         </label>
         <div className="space-y-3">
           {answers.map((item, index) => (
-            <div key={item.id} className="bg-gray-50 border border-gray-300 rounded-md overflow-hidden shadow-sm">
+            <div key={item.id} className="bg-ground border border-line rounded-md overflow-hidden ">
               <RepeatableBlockActions 
                 index={index}
                 total={answers.length}
@@ -191,7 +191,7 @@ function PollForm({ currentEmbed, formMode, onChange }) {
                 onRemove={answers.length > 2 ? removeAnswer : null}
                 title={`Réponse ${index + 1}`}
               />
-              <div className="p-4 flex items-center gap-3 bg-white">
+              <div className="p-4 flex items-center gap-3 bg-surface">
                 <div className="flex-1">
                   <input
                     type="text"
@@ -203,12 +203,12 @@ function PollForm({ currentEmbed, formMode, onChange }) {
                       index === 2 ? "Sans opinion" :
                       `Option ${index + 1}`
                     }
-                    className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                     required
                   />
                 </div>
                 {item.votes > 0 && (
-                  <span className="text-xs font-semibold text-gray-600 bg-gray-100 border border-gray-300 px-3 py-1.5 rounded-md shadow-sm whitespace-nowrap flex items-center gap-1.5" title="Nombre de votes enregistrés">
+                  <span className="text-xs font-semibold text-muted bg-ground border border-line px-3 py-1.5 rounded-md whitespace-nowrap flex items-center gap-1.5" title="Nombre de votes enregistrés">
                     {item.votes} {item.votes > 1 ? 'votes' : 'vote'}
                   </span>
                 )}
@@ -219,7 +219,7 @@ function PollForm({ currentEmbed, formMode, onChange }) {
         <button
           type="button"
           onClick={addAnswer}
-          className="text-blick hover:underline text-sm mt-4 font-medium flex items-center"
+          className="text-accent hover:underline text-sm mt-4 font-medium flex items-center"
         >
           + Ajouter une réponse
         </button>

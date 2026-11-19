@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import imageCompression from 'browser-image-compression';
 
-// IMPORTANT: Remplacer par l'URL complète vers votre script PHP sur votre serveur FTP !
-// Exemple: 'https://votre-site.com/upload.php'
-const UPLOAD_ENDPOINT = 'https://storytelling.blick.ch/fr/__is_embed_somewhere/_uploads/upload.php';
+// Endpoint piloté par l'environnement actif (.env-test / .env-prod), pour ne
+// jamais uploader des images de test dans le dossier d'upload de prod.
+// Fallback prod si la variable n'est pas définie.
+const UPLOAD_ENDPOINT = import.meta.env.VITE_UPLOAD_ENDPOINT || 'https://storytelling.blick.ch/fr/__is_embed_somewhere/_uploads/upload.php';
 
 // Convertit un fichier image en WebP via canvas
 async function convertToWebp(file) {
@@ -127,7 +128,7 @@ function ImageUploaderFTP({ initialUrl = '', oldUrl = '', label = 'Image', disab
 
     return (
         <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor={`ftp-upload-input-${type}`}>
+            <label className="block text-sm font-medium text-ink mb-2" htmlFor={`ftp-upload-input-${type}`}>
                 {label} (FTP)
             </label>
             <input
@@ -141,7 +142,7 @@ function ImageUploaderFTP({ initialUrl = '', oldUrl = '', label = 'Image', disab
             />
             <button
                 type="button"
-                className="btn-secondary inline-block w-48 mb-0 px-3 py-2 border border-blick rounded-md focus:outline-none text-blick font-semibold cursor-pointer text-center"
+                className="btn-secondary inline-block w-48 mb-0 px-3 py-2 border border-accent rounded-md focus:outline-none text-accent font-semibold cursor-pointer text-center"
                 style={{ userSelect: 'none' }}
                 disabled={disabled || uploading}
                 onClick={() => inputRef.current && inputRef.current.click()}
@@ -151,12 +152,12 @@ function ImageUploaderFTP({ initialUrl = '', oldUrl = '', label = 'Image', disab
             {uploadError && <p className="text-xs text-red-500 mt-2">{uploadError}</p>}
             {img && (
                 <div className="mt-2">
-                    <p className="text-xs text-gray-500 mb-1">Image actuelle</p>
+                    <p className="text-xs text-muted mb-1">Image actuelle</p>
                     <div className="relative inline-block">
-                        <img src={img} alt="Upload" className="max-h-32 rounded shadow" />
+                        <img src={img} alt="Upload" className="max-h-32 rounded " />
                         <button
                             type="button"
-                            className="absolute top-1 right-1 btn-form btn-delete bg-white rounded-full p-1"
+                            className="absolute top-1 right-1 btn-form btn-delete bg-surface rounded-full p-1"
                             title="Supprimer l'image"
                             onClick={handleDeleteImage}
                             disabled={disabled || uploading}

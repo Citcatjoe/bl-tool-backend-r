@@ -49,17 +49,19 @@ function NewWidgetPicker({ isOpen, onClose, onPick }) {
         role="dialog"
         aria-modal="true"
         aria-label="Créer un widget"
-        className={`max-w-2xl w-full h-auto overflow-y-auto fixed top-1/2 left-1/2 max-h-[80vh] bg-white rounded-xl shadow-lg z-40 flex flex-col -translate-x-1/2 transition-all duration-150 ease-in-out ${
+        className={`max-w-2xl w-full h-auto overflow-y-auto fixed top-1/2 left-1/2 max-h-[80vh] bg-surface border border-line rounded-lg shadow-pop z-40 flex flex-col -translate-x-1/2 transition-all duration-150 ease-in-out ${
           isOpen
             ? 'opacity-100 visible -translate-y-1/2'
             : 'opacity-0 invisible translate-y-[calc(-50%+40px)]'
         }`}
       >
-        <div className="flex justify-between items-center px-6 py-4 bg-gray-200 border-b border-gray-300 rounded-t-xl">
-          <h2 className="text-xl font-bold text-gray-800">Créer un widget</h2>
+        <div className="flex justify-between items-center pl-6 pr-3 py-2 border-b border-line">
+          <h2 className="title-lg text-ink m-0">Créer un widget</h2>
           <button
+            type="button"
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl font-semibold transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-pill text-muted hover:text-ink hover:bg-ground text-2xl transition-colors"
+            aria-label="Fermer"
             title="Fermer"
           >
             ×
@@ -74,12 +76,10 @@ function NewWidgetPicker({ isOpen, onClose, onPick }) {
                 ref={i === 0 ? firstCardRef : null}
                 type="button"
                 onClick={() => onPick(w.type)}
-                className="flex flex-col items-center text-center p-3 border border-gray-300 rounded-md hover:border-blick hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors cursor-pointer"
+                className="flex flex-col items-center text-center p-4 min-h-[44px] bg-surface border border-line rounded-md hover:border-accent hover:bg-ground focus:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors cursor-pointer"
               >
-                {/* Badge = rappel visuel du même code couleur que dans la liste */}
                 <TypeBadge type={w.type} />
-                <div className="font-semibold text-sm text-gray-800 mt-1.5">{w.label}</div>
-                <div className="text-xs text-gray-500 mt-2">{w.desc}</div>
+                <div className="body-sm text-muted mt-2">{w.desc}</div>
               </button>
             ))}
           </div>

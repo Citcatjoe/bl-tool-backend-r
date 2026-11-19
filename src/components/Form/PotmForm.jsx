@@ -193,7 +193,7 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
       <div className="flex gap-6 items-start">
         {/* Brand */}
         <div className="flex-none w-44">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Brand
           </label>
           <div className="flex gap-4 items-center h-12">
@@ -204,9 +204,9 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
                 value="blick"
                 checked={brand === 'blick'}
                 onChange={() => setBrand('blick')}
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                className="w-4 h-4 text-accent border-line focus:ring-accent cursor-pointer"
               />
-              <span className="text-sm text-gray-700">Blick</span>
+              <span className="text-sm text-ink">Blick</span>
             </label>
             <label className="flex items-center gap-2 cursor-not-allowed opacity-50 select-none" title="Le module joueur du match n'est pas encore compatible avec la brand PME.">
               <input
@@ -216,48 +216,48 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
                 checked={brand === 'pme'}
                 onChange={() => setBrand('pme')}
                 disabled
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-not-allowed"
+                className="w-4 h-4 text-accent border-line focus:ring-accent cursor-not-allowed"
               />
-              <span className="text-sm text-gray-400">Pme</span>
+              <span className="text-sm text-muted">Pme</span>
             </label>
           </div>
         </div>
 
         {/* Rubrique */}
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Rubrique *
           </label>
           <select
             value={theme || ''}
             onChange={(e) => setTheme(e.target.value || null)}
-            className={`field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!theme ? 'text-gray-400' : 'text-gray-700'
+            className={`field mb-0 w-full px-3 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer ${!theme ? 'text-muted' : 'text-ink'
               }`}
             required
           >
             <option value="" disabled hidden>Sélectionner...</option>
-            <option value="Suisse" className="text-gray-700">Suisse</option>
-            <option value="Inter" className="text-gray-700">Inter</option>
-            <option value="Sport" className="text-gray-700">Sport</option>
+            <option value="Suisse" className="text-ink">Suisse</option>
+            <option value="Inter" className="text-ink">Inter</option>
+            <option value="Sport" className="text-ink">Sport</option>
           </select>
         </div>
       </div>
 
       <div className="py-4">
-        <hr className="border-gray-200" />
+        <hr className="border-line" />
       </div>
 
       {/* Section 1: Contexte et Catégorie */}
       <div className="flex gap-4">
         {/* Contexte */}
         <div className="w-1/2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Contexte *
           </label>
           <select
             value={context}
             onChange={(e) => handleContextChange(e.target.value)}
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+            className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer"
           >
             {contextsData.map((ctx) => (
               <option key={ctx.type} value={ctx.type}>{ctx.label}</option>
@@ -267,13 +267,13 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
 
         {/* Catégorie */}
         <div className="w-1/2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Catégorie *
           </label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+            className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer"
           >
             <option value="Messieurs">Messieurs</option>
             <option value="Dames">Dames</option>
@@ -285,7 +285,7 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
       <div className="flex gap-4">
         {/* Label du match */}
         <div className="w-1/2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Label du match *
           </label>
           <input
@@ -293,21 +293,21 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
             value={matchText}
             onChange={(e) => setMatchText(e.target.value)}
             placeholder="France - Suisse"
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
             required
           />
         </div>
 
         {/* Date du match */}
         <div className="w-1/2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Date du match *
           </label>
           <input
             type="date"
             value={matchDate}
             onChange={(e) => setMatchDate(e.target.value)}
-            className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+            className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer"
             required
           />
         </div>
@@ -315,12 +315,12 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
 
       {/* Section 3: Candidats */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">
+        <label className="block text-sm font-medium text-ink mb-3">
           Candidats *
         </label>
         <div className="space-y-4">
           {players.map((player, index) => (
-            <div key={index} className="bg-gray-50 border border-gray-300 rounded-md overflow-hidden shadow-sm">
+            <div key={index} className="bg-ground border border-line rounded-md overflow-hidden ">
               <RepeatableBlockActions
                 index={index}
                 total={players.length}
@@ -330,11 +330,11 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
                 title={`Candidat ${index + 1}`}
               />
               
-              <div className="p-4 bg-white space-y-4">
+              <div className="p-4 bg-surface space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Nom */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                    <label className="block text-xs font-medium text-muted mb-1">
                       Nom du joueur <span style={{ display: 'none' }}>#{index + 1}</span> *
                     </label>
                     <input
@@ -342,20 +342,20 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
                       value={player.name}
                       onChange={(e) => handlePlayerChange(index, 'name', e.target.value)}
                       placeholder="Nom du joueur"
-                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                       required
                     />
                   </div>
                   
                   {/* Position */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                    <label className="block text-xs font-medium text-muted mb-1">
                       Position
                     </label>
                     <select
                       value={player.position}
                       onChange={(e) => handlePlayerChange(index, 'position', e.target.value)}
-                      className="field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+                      className="field mb-0 w-full px-3 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer"
                     >
                       <option value="Attaquant">{getPositionForCategory('Attaquant', category)}</option>
                       <option value="Défenseur">{getPositionForCategory('Défenseur', category)}</option>
@@ -368,13 +368,13 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
 
                   {/* Team */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                    <label className="block text-xs font-medium text-muted mb-1">
                       Équipe
                     </label>
                     <select
                       value={player.team}
                       onChange={(e) => handlePlayerChange(index, 'team', e.target.value)}
-                      className="field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+                      className="field mb-0 w-full px-3 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer"
                     >
                       {teamsData
                         .filter(team => team.type === context)
@@ -392,11 +392,11 @@ function PotmForm({ currentEmbed, formMode, onChange }) {
         <button
           type="button"
           onClick={addPlayer}
-          className="text-blick hover:underline text-sm mt-4 font-medium flex items-center"
+          className="text-accent hover:underline text-sm mt-4 font-medium flex items-center"
         >
           + Ajouter un candidat
         </button>
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-muted mt-2">
           Il faut au moins 2 candidats.
         </p>
       </div>

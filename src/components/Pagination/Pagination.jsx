@@ -31,7 +31,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
   }
 
   return (
-    <div className={s.paginationContainer}>
+    <nav aria-label="Pagination" className={s.paginationContainer}>
       {/* Bouton Précédent */}
       <button
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
@@ -46,7 +46,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
         if (page === '...') {
           return (
             <span key={`ellipsis-${idx}`} className={s.ellipsis}>
-              ...
+              …
             </span>
           );
         }
@@ -55,6 +55,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
             key={`page-${page}`}
             onClick={() => onPageChange(page)}
             className={`${s.pageButton} ${currentPage === page ? s.active : ''}`}
+            aria-current={currentPage === page ? 'page' : undefined}
           >
             {page}
           </button>
@@ -69,7 +70,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
       >
         Suivant
       </button>
-    </div>
+    </nav>
   );
 }
 

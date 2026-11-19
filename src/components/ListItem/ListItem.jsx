@@ -5,9 +5,28 @@ import { buildEmbedUrl, DEFAULT_CLIENT_BASE_URL } from '@rms/widget-model';
 import { useState, useRef, useEffect } from 'react';
 import ConfirmModal from '../ConfirmModal/ConfirmModal';
 import TypeBadge from '../TypeBadge';
-import { WIDGET_TYPES } from '../../data/widgetTypes';
 
-function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconTinder, iconQuiz, iconTestimony, iconJersey, iconProno, iconStar, iconDotsVertical, iconEye, iconCopy, iconEdit, iconTrash, iconDownload, onEdit, onDataChange, user, devMode }) {
+// Pictogrammes du menu d'actions (trait 2px, grille 24px). Couleur via `currentColor`.
+const MENU_ICONS = {
+  eye: <><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>,
+  copy: <><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></>,
+  edit: <><path d="M12 20h8" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z" /></>,
+  download: <><path d="M12 4v12" /><path d="M7 11l5 5 5-5" /><path d="M5 20h14" /></>,
+  trash: <><path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M6 7l1 13h10l1-13" /><path d="M10 11l4 4M14 11l-4 4" /></>,
+  dots: <><circle cx="12" cy="5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="12" cy="19" r="1.2" /></>,
+};
+
+function MenuIcon({ name, className = '' }) {
+  return (
+    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`flex-none block ${className}`}>
+      {MENU_ICONS[name]}
+    </svg>
+  );
+}
+
+const MENU_ITEM = 'flex items-center gap-3 min-h-[44px] px-4 rounded-[8px] text-[15px] leading-5 font-medium text-ink whitespace-nowrap hover:bg-ground cursor-pointer';
+
+function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconTinder, iconQuiz, iconTestimony, iconJersey, iconProno, iconStar, onEdit, onDataChange, user, devMode }) {
   // Handler pour la modification de la structure d'un poll
   // const handleModifyPollData = async () => {
   //   if (embed.type !== 'poll') return;
@@ -348,38 +367,28 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
   };
 
   return (
-    <li className={`elem-list-item relative h-20 w-full bg-white border-b`}>
-      <div className="font-blickb elem-title text-sm text-gray-600 px-4 h-full float-left flex items-center w-4/12">
-        {embed.meta?.title || 'Sans titre'}
+    <li className="elem-list-item relative flex items-center w-full border-b border-line last:border-b-0 text-ink">
+      <div className="row-title elem-title text-ink px-5 py-[18px] w-[29%]">
+        <span className="line-clamp-2">{embed.meta?.title || 'Sans titre'}</span>
       </div>
-      <div className="icon-container flex items-center w-[10%] px-4 h-full float-left">
-        {(() => {
-          // Libellé humain et couleur viennent du registre partagé (widgetTypes) ;
-          // le badge lui-même est le composant réutilisé par la modale de création.
-          const label = WIDGET_TYPES.find((w) => w.type === embed.type)?.label || 'Inconnu';
-          return (
-            <span className="relative group flex items-center cursor-help">
-              <TypeBadge type={embed.type} />
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 bg-gray-900/95 backdrop-blur text-white text-[11px] px-2.5 py-1.5 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-[999] shadow-lg border border-white/10 pointer-events-none">
-                {label}
-              </span>
-            </span>
-          );
-        })()}
+      <div className="icon-container flex items-center w-[19%] px-5 py-[18px]">
+        <TypeBadge type={embed.type} />
       </div>
-      <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-[23.33%]">
+      <div className="text-sm leading-5 text-muted px-5 py-[18px] w-[17.33%] min-w-0">
         {/* Affichage de l'auteur */}
-        {embed.meta?.author || embed.author || 'Auteur inconnu'}
+        <span className="block truncate" title={embed.meta?.author || embed.author || undefined}>
+          {embed.meta?.author || embed.author || 'Auteur inconnu'}
+        </span>
       </div>
-      {/* <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
+      {/* <div className="text-sm text-muted px-5 py-[18px] w-1/12">
           {typeof embed.counterViews === 'number' ? embed.counterViews : 0}
       </div> */}
-      <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
+      <div className="text-sm leading-5 font-semibold text-ink px-5 py-[18px] w-[9%]">
         {/* Affichage de la performance ou du nombre de réponses */}
         {(() => {
           const perf = getPerformanceVal();
           if (perf === null) {
-            return <span className="text-gray-400">n/a</span>;
+            return <span className="font-normal text-muted">n/a</span>;
           }
           const tooltip = getTooltipText();
           return (
@@ -395,29 +404,29 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
           );
         })()}
       </div>
-      <div className="text-sm text-gray-400 px-4 h-full float-left flex items-center w-1/12">
+      <div className="text-sm leading-5 text-muted px-5 py-[18px] w-[9%] whitespace-nowrap">
         {/* Affichage de la date de création */}
         {getFormattedCreationDate()}
       </div>
 
       {devMode && (
-        <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
+        <div className="text-sm leading-5 text-muted px-5 py-[18px] w-1/12">
           {/* Affichage du nombre de vues */}
           {typeof embed.stats?.views === 'number' ? embed.stats.views : (typeof embed.counterViews === 'number' ? embed.counterViews : 0)}
         </div>
       )}
 
       {devMode && (
-        <div className="text-sm text-gray-600 px-4 h-full float-left flex items-center w-1/12">
+        <div className="text-sm leading-5 text-muted px-5 py-[18px] w-1/12">
           {/* Affichage du rapport performance/counterViews */}
           {(() => {
             const performance = getPerformanceVal();
             if (performance === null) {
-              return <span className="text-gray-400">n/a</span>;
+              return <span className="text-muted">n/a</span>;
             }
             const counterViews = typeof embed.stats?.views === 'number' ? embed.stats.views : (typeof embed.counterViews === 'number' ? embed.counterViews : 0);
             if (counterViews === 0) {
-              return <span className="text-gray-400">n/a</span>;
+              return <span className="text-muted">n/a</span>;
             }
             
             const ratio = ((performance / counterViews) * 100).toFixed(1);
@@ -426,11 +435,15 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
         </div>
       )}
      
-            <div id="menu-actions" className="absolute right-4 items-center flex justify-center top-1/2 -translate-y-1/2" ref={menuRef}>
+            <div id="menu-actions" className="absolute right-3 items-center flex justify-center top-1/2 -translate-y-1/2" ref={menuRef}>
              <button 
                id="menu-actions-btn" 
-               className={`w-8 h-8 rounded-md transition-colors duration-300 relative flex items-center justify-center ${
-                 isCopied ? 'text-white' : 'hover:bg-gray-100'
+               type="button"
+               aria-label={`Actions pour ${embed.meta?.title || 'Sans titre'}`}
+               aria-haspopup="menu"
+               aria-expanded={isMenuVisible}
+               className={`w-11 h-11 rounded-pill transition-colors duration-300 relative flex items-center justify-center ${
+                 isCopied ? 'text-white' : (isMenuVisible ? 'bg-accent-soft text-accent' : 'text-ink hover:bg-ground')
                }`}
                style={isCopied ? { backgroundColor: '#22c55e', color: 'white', cursor: 'default' } : {}}
                onClick={isCopied ? null : toggleMenu}
@@ -439,89 +452,90 @@ function ListItem({ embed, iconPoll, iconCalendar, iconTeaser, iconFolder, iconT
                  {isCopied ? (
                    <span className="font-bold text-base leading-none text-white select-none">✓</span>
                  ) : (
-                   <img src={iconDotsVertical} alt="Actions" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                   <MenuIcon name="dots" />
                  )}
              </button>
             <ul 
               id="menu-actions-items" 
-              className={`absolute bg-white text-base py-2 bottom-0 w-60 right-12 rounded-xl shadow-lg ${isMenuVisible ? 'isVisible' : ''}`}
+              className={`absolute flex flex-col w-max min-w-[220px] p-2 bg-surface border border-line rounded-lg shadow-pop bottom-0 right-12 z-10 ${isMenuVisible ? 'isVisible' : ''}`}
             >
                 {/* Vue RS seulement pour les polls */}
                 {embed.type === 'poll' && (
                   <li 
-                    className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4"
+                    className={MENU_ITEM}
                     onClick={() => {
                       handleSocialView();
                       setIsMenuVisible(false);
                     }}
                   >
-                    <img src={iconEye} alt="" className="mr-5 w-5 h-5" />
+                    <MenuIcon name="eye" />
                     Vue RS
                   </li>
                 )}
                 {embed.type === 'testimony' && (
                   <li 
-                    className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4"
+                    className={MENU_ITEM}
                     onClick={() => {
                       handleDownloadMessages();
                       setIsMenuVisible(false);
                     }}
                   >
-                    <img src={iconDownload} alt="" className="mr-5 w-5 h-5" />
+                    <MenuIcon name="download" />
                     Télécharger messages
                   </li>
                 )}
                 <li 
-                  className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4"
+                  className={MENU_ITEM}
                   onClick={() => {
                     handleCopy();
                     setIsMenuVisible(false);
                   }}
                 >
-                  <img src={iconCopy} alt="" className="mr-5 w-5 h-5" />
+                  <MenuIcon name="copy" />
                   Copier l'URL
                 </li>
                 {user?.email === 'cesargreppin@gmail.com' && (
                   <li 
-                    className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4"
+                    className={MENU_ITEM}
                     onClick={() => {
                       handleCopyId();
                       setIsMenuVisible(false);
                     }}
                   >
-                    <img src={iconCopy} alt="" className="mr-5 w-5 h-5" />
+                    <MenuIcon name="copy" />
                     Copier l'ID
                   </li>
                 )}
                 <li 
-                  className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4"
+                  className={MENU_ITEM}
                   onClick={() => {
                     handleEdit();
                     setIsMenuVisible(false);
                   }}
                 >
-                  <img src={iconEdit} alt="" className="mr-5 w-5 h-5" />
+                  <MenuIcon name="edit" />
                   Éditer
                 </li>
+                <li role="separator" aria-hidden="true" className="h-px my-1.5 mx-2 bg-line" />
                 <li 
-                  className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4"
+                  className={MENU_ITEM}
                   onClick={handleDeleteClick}
                 >
-                  <img src={iconTrash} alt="" className="mr-5 w-5 h-5" />
+                  <MenuIcon name="trash" className="text-accent" />
                   Supprimer
                 </li>
                 {user?.email === 'cesargreppin@gmail.com' && (
                   <li 
-                    className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4"
+                    className={MENU_ITEM}
                     onClick={handleDeleteForRealClick}
                   >
-                    <img src={iconTrash} alt="" className="mr-5 w-5 h-5" />
+                    <MenuIcon name="trash" className="text-accent" />
                     Supprimer pour de vrai
                   </li>
                 )}
                 {/* <li 
                   id="menu-action-modify-this-poll-data" 
-                  className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4"
+                  className="hover:bg-ground cursor-pointer h-12 flex items-center px-4"
                   onClick={() => {
                     handleModifyPollData();
                     setIsMenuVisible(false);

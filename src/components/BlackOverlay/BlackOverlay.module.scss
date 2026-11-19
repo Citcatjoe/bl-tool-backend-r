@@ -1,9 +1,8 @@
 .blackOverlay {
   position: fixed;
   inset: 0;
-  // visibility: hidden;
   opacity: 0;
-  background: rgba(0,0,0,0.5);
+  background: color-mix(in srgb, var(--ink) 50%, transparent);
   z-index: 40;
   transition: all 0.15s;
   visibility: hidden;

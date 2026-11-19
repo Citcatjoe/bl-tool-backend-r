@@ -130,7 +130,7 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
       <div className="flex gap-6 items-start">
         {/* Brand */}
         <div className="flex-none w-44">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Brand
           </label>
           <div className="flex gap-4 items-center h-12">
@@ -141,9 +141,9 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
                 value="blick"
                 checked={brand === 'blick'}
                 onChange={() => setBrand('blick')}
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                className="w-4 h-4 text-accent border-line focus:ring-accent cursor-pointer"
               />
-              <span className="text-sm text-gray-700">Blick</span>
+              <span className="text-sm text-ink">Blick</span>
             </label>
             <label className="flex items-center gap-2 cursor-not-allowed opacity-50 select-none" title="Le module de tinder n'est pas encore compatible avec la brand PME.">
               <input
@@ -153,40 +153,40 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
                 checked={brand === 'pme'}
                 onChange={() => setBrand('pme')}
                 disabled
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-not-allowed"
+                className="w-4 h-4 text-accent border-line focus:ring-accent cursor-not-allowed"
               />
-              <span className="text-sm text-gray-400">Pme</span>
+              <span className="text-sm text-muted">Pme</span>
             </label>
           </div>
         </div>
 
         {/* Rubrique */}
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Rubrique *
           </label>
           <select
             value={theme || ''}
             onChange={(e) => setTheme(e.target.value || null)}
-            className={`field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!theme ? 'text-gray-400' : 'text-gray-700'
+            className={`field mb-0 w-full px-3 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer ${!theme ? 'text-muted' : 'text-ink'
               }`}
             required
           >
             <option value="" disabled hidden>Sélectionner...</option>
-            <option value="Suisse" className="text-gray-700">Suisse</option>
-            <option value="Inter" className="text-gray-700">Inter</option>
-            <option value="Sport" className="text-gray-700">Sport</option>
+            <option value="Suisse" className="text-ink">Suisse</option>
+            <option value="Inter" className="text-ink">Inter</option>
+            <option value="Sport" className="text-ink">Sport</option>
           </select>
         </div>
       </div>
 
       <div className="py-4">
-        <hr className="border-gray-200" />
+        <hr className="border-line" />
       </div>
 
       {/* Label */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-ink mb-2">
           Label du Tinder *
         </label>
         <input
@@ -194,7 +194,7 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
           type="text"
           value={tinderLabel}
           onChange={e => setTinderLabel(e.target.value)}
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
           placeholder="Donnez votre avis"
           required
         />
@@ -202,7 +202,7 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
 
       {/* Titre */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-ink mb-2">
           Titre du Tinder *
         </label>
         <input
@@ -210,7 +210,7 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
           type="text"
           value={tinderTitle}
           onChange={e => setTinderTitle(e.target.value)}
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
           placeholder="Sur le même sujet, quel article vous intéresserait ?"
           required
         />
@@ -218,12 +218,12 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
 
       {/* Sujets proposés */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">
+        <label className="block text-sm font-medium text-ink mb-3">
           Sujets proposés (3) *
         </label>
         <div className="space-y-4">
           {tinderCards.map((card, idx) => (
-            <div key={idx} className="bg-gray-50 border border-gray-300 rounded-md overflow-hidden shadow-sm">
+            <div key={idx} className="bg-ground border border-line rounded-md overflow-hidden ">
               <RepeatableBlockActions
                 index={idx}
                 total={tinderCards.length}
@@ -233,11 +233,11 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
                 title={`Sujet ${idx + 1}`}
               />
 
-              <div className="p-4 bg-white space-y-4">
+              <div className="p-4 bg-surface space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Label de la carte */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                    <label className="block text-xs font-medium text-muted mb-1">
                       Label de la carte <span style={{ display: 'none' }}>#{idx + 1}</span> *
                     </label>
                     <input
@@ -245,14 +245,14 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
                       placeholder="Suisse"
                       value={card.tinderCardLabel}
                       onChange={e => handleCardChange(idx, 'tinderCardLabel', e.target.value)}
-                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                       required
                     />
                   </div>
 
                   {/* Titre de la carte */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                    <label className="block text-xs font-medium text-muted mb-1">
                       Titre de la carte <span style={{ display: 'none' }}>#{idx + 1}</span> *
                     </label>
                     <input
@@ -260,7 +260,7 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
                       placeholder="En Suisse, pensez-vous que nous soyons trop tolérants ?"
                       value={card.tinderCardTitle}
                       onChange={e => handleCardChange(idx, 'tinderCardTitle', e.target.value)}
-                      className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                       required
                     />
                   </div>
@@ -273,7 +273,7 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
 
       {/* Légende */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-ink mb-2">
           Légende {legendDisplay && '*'}
         </label>
         <input
@@ -281,7 +281,7 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
           type="text"
           value={legendTxt}
           onChange={e => setLegendTxt(e.target.value)}
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
           placeholder="Texte de la légende"
         />
         <div className="flex items-center mt-3">
@@ -290,9 +290,9 @@ function TinderForm({ currentEmbed, formMode, onChange, currentUser }) {
             id="legendDisplay"
             checked={legendDisplay}
             onChange={e => setLegendDisplay(e.target.checked)}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2 cursor-pointer"
+            className="h-4 w-4 text-accent focus:ring-accent border-line rounded mr-2 cursor-pointer"
           />
-          <label htmlFor="legendDisplay" className="block text-sm text-gray-700 select-none cursor-pointer">
+          <label htmlFor="legendDisplay" className="block text-sm text-ink select-none cursor-pointer">
             Afficher la légende
           </label>
         </div>

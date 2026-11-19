@@ -121,11 +121,11 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
     if (formElement) {
       formElement.querySelectorAll('.text-red-600').forEach(el => {
         el.classList.remove('text-red-600', 'font-bold');
-        el.classList.add('text-gray-700');
+        el.classList.add('text-ink');
       });
       formElement.querySelectorAll('.border-red-500').forEach(el => {
         el.classList.remove('border-red-500', 'focus:ring-red-500');
-        el.classList.add('border-gray-300', 'focus:ring-blue-500');
+        el.classList.add('border-line-strong', 'focus:ring-accent');
       });
     }
 
@@ -146,7 +146,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
       if (targetLabel) {
         // Appliquer la couleur rouge au label
-        targetLabel.classList.remove('text-gray-700', 'text-gray-500');
+        targetLabel.classList.remove('text-ink', 'text-muted');
         targetLabel.classList.add('text-red-600', 'font-bold');
         
         // Appliquer la bordure rouge au champ de saisie associé
@@ -163,7 +163,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         }
 
         if (input) {
-          input.classList.remove('border-gray-300', 'focus:ring-blue-500');
+          input.classList.remove('border-line-strong', 'focus:ring-accent');
           input.classList.add('border-red-500', 'focus:ring-red-500');
           input.focus();
         }
@@ -1382,13 +1382,15 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
   };
 
   return (
-    <div id="form" className={s.form + (formVisible ? ' ' + s.isVisible : '') + ' max-w-4xl w-full h-auto overflow-y-auto fixed top-1/2 left-1/2 bg-white rounded-xl shadow-lg z-40 flex flex-col'}>
+    <div id="form" className={s.form + (formVisible ? ' ' + s.isVisible : '') + ' max-w-4xl w-full h-auto overflow-y-auto fixed top-1/2 left-1/2 bg-surface border border-line rounded-lg shadow-pop z-40 flex flex-col'}>
       {/* En-tête avec titre et bouton fermer */}
-      <div className="flex justify-between items-center px-6 py-4 bg-gray-200 border-b border-gray-300 rounded-t-xl">
-        <h2 className="text-xl font-bold text-gray-800">{getFormTitle()}</h2>
+      <div className="flex justify-between items-center pl-6 pr-3 py-2 border-b border-line">
+        <h2 className="title-lg text-ink m-0">{getFormTitle()}</h2>
         <button 
           onClick={handleClose}
-          className="text-gray-500 hover:text-gray-700 text-2xl font-semibold transition-colors"
+          className="w-11 h-11 flex items-center justify-center rounded-pill text-muted hover:text-ink hover:bg-ground text-2xl transition-colors"
+          type="button"
+          aria-label="Fermer"
           title="Fermer"
           disabled={isLoading}
         >
@@ -1400,7 +1402,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
 
         {/* Debug info (visible uniquement en mode développeur) */}
         {devMode && (
-          <div className="mb-4 p-2 bg-gray-100 text-xs">
+          <div className="mb-4 p-2 bg-ground text-xs">
             <p>Mode: {formMode}</p>
             <p>Type: {formType}</p>
             <p>ID: {currentEmbed?.id || 'Nouveau'}</p>
@@ -1506,14 +1508,14 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         <div className="flex justify-end gap-2 mt-6">
           <button
             onClick={handleClose}
-            className="w-1/2 px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+            className="w-1/2 h-11 px-4 text-ink font-medium bg-surface border border-line rounded-pill hover:bg-ground"
             disabled={isLoading || isSuccess}
           >
             Annuler
           </button>
           <button
             onClick={handleSave}
-            className={`w-1/2 rounded-md font-bold transition-all duration-300 ${
+            className={`w-1/2 h-11 rounded-pill font-semibold transition-all duration-300 ${
               isSuccess ? 'text-white border-green-600' : 'btn-primary'
             }`}
             style={isSuccess ? { backgroundColor: '#22c55e', borderColor: '#22c55e', color: 'white', cursor: 'default' } : {}}

@@ -55,7 +55,7 @@ function TeaserForm({ currentEmbed, formMode, onChange }) {
       <div className="flex gap-6 items-start">
         {/* Brand */}
         <div className="flex-none w-44">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Brand
           </label>
           <div className="flex gap-4 items-center h-12">
@@ -66,9 +66,9 @@ function TeaserForm({ currentEmbed, formMode, onChange }) {
                 value="blick"
                 checked={brand === 'blick'}
                 onChange={() => setBrand('blick')}
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                className="w-4 h-4 text-accent border-line focus:ring-accent cursor-pointer"
               />
-              <span className="text-sm text-gray-700">Blick</span>
+              <span className="text-sm text-ink">Blick</span>
             </label>
             <label className="flex items-center gap-2 cursor-not-allowed opacity-50 select-none" title="Le module de teaser n'est pas encore compatible avec la brand PME.">
               <input
@@ -78,47 +78,47 @@ function TeaserForm({ currentEmbed, formMode, onChange }) {
                 checked={brand === 'pme'}
                 onChange={() => setBrand('pme')}
                 disabled
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-not-allowed"
+                className="w-4 h-4 text-accent border-line focus:ring-accent cursor-not-allowed"
               />
-              <span className="text-sm text-gray-400">Pme</span>
+              <span className="text-sm text-muted">Pme</span>
             </label>
           </div>
         </div>
 
         {/* Rubrique */}
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-ink mb-2">
             Rubrique *
           </label>
           <select
             value={theme || ''}
             onChange={(e) => setTheme(e.target.value || null)}
-            className={`field mb-0 w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer ${!theme ? 'text-gray-400' : 'text-gray-700'
+            className={`field mb-0 w-full px-3 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface cursor-pointer ${!theme ? 'text-muted' : 'text-ink'
               }`}
             required
           >
             <option value="" disabled hidden>Sélectionner...</option>
-            <option value="Suisse" className="text-gray-700">Suisse</option>
-            <option value="Inter" className="text-gray-700">Inter</option>
-            <option value="Sport" className="text-gray-700">Sport</option>
+            <option value="Suisse" className="text-ink">Suisse</option>
+            <option value="Inter" className="text-ink">Inter</option>
+            <option value="Sport" className="text-ink">Sport</option>
           </select>
         </div>
       </div>
 
       <div className="py-4">
-        <hr className="border-gray-200" />
+        <hr className="border-line" />
       </div>
 
       {/* Label du teaser */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-ink mb-2">
           Label du teaser *
         </label>
         <input
           type="text"
           value={teaserLabel}
           onChange={(e) => setTeaserLabel(e.target.value)}
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
           placeholder="Groenland"
           required
         />
@@ -126,13 +126,13 @@ function TeaserForm({ currentEmbed, formMode, onChange }) {
 
       {/* Titre du teaser */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-ink mb-2">
           Titre du teaser *
         </label>
         <textarea
           value={teaserTitle}
           onChange={(e) => setTeaserTitle(e.target.value)}
-          className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[115px] bg-white"
+          className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent resize-none min-h-[115px] bg-surface"
           placeholder="Ce pays que Trump veut prendre par la force&#10;Vous pouvez utiliser plusieurs lignes"
           rows={3}
           required
@@ -155,34 +155,34 @@ function TeaserForm({ currentEmbed, formMode, onChange }) {
 
       {/* Section Bouton d'action */}
       <div>
-        <h3 className="block text-sm font-medium text-gray-700 mb-3">Bouton d'action</h3>
-        <div className="bg-gray-50 border border-gray-300 p-4 rounded-md space-y-4">
+        <h3 className="block text-sm font-medium text-ink mb-3">Bouton d'action</h3>
+        <div className="bg-ground border border-line p-4 rounded-md space-y-4">
           {/* Champs du bouton sur la même ligne */}
           <div className="grid grid-cols-2 gap-4"> 
             {/* Texte du bouton */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-muted mb-1">
                 Label du bouton *
               </label>
               <input
                 type="text"
                 value={linkGlobalTxt}
                 onChange={(e) => setLinkGlobalTxt(e.target.value)}
-                className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                 placeholder="Vers l'article"
               />
             </div>
 
             {/* Lien du bouton */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-muted mb-1">
                 Lien du bouton *
               </label>
               <input
                 type="url"
                 value={linkGlobalHref}
                 onChange={(e) => setLinkGlobalHref(e.target.value)}
-                className="field mb-0 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-surface"
                 placeholder="https://blick.ch"
               />
             </div>
@@ -195,9 +195,9 @@ function TeaserForm({ currentEmbed, formMode, onChange }) {
               id="linkGlobalNewTab"
               checked={linkGlobalNewTab}
               onChange={(e) => setLinkGlobalNewTab(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2 cursor-pointer"
+              className="h-4 w-4 text-accent focus:ring-accent border-line rounded mr-2 cursor-pointer"
             />
-            <label htmlFor="linkGlobalNewTab" className="block text-sm text-gray-700 select-none cursor-pointer">
+            <label htmlFor="linkGlobalNewTab" className="block text-sm text-ink select-none cursor-pointer">
               Ouvrir dans un nouvel onglet
             </label>
           </div>

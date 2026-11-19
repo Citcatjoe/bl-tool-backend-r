@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import s from './Header.module.scss';
-import logo from '../../assets/img/blick-tools-logo.svg';
-import iconUser from '../../assets/img/icon-user.svg';
+import logo from '../../assets/brand/widget-studio-logo.svg';
 
 function Header({ onLogout, user, onEditTeams }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -27,10 +26,9 @@ function Header({ onLogout, user, onEditTeams }) {
   // lint propre. À restaurer avec le bloc si le filtre revient un jour.
 
   return (
-    <header className={`${s.header} bg-white relative w-full border-b z-30`}>
-      <img src={logo} alt="logo blick tools" className="absolute left-4 top-1/2 -translate-y-1/2"/>
-      <span className={s.appTitle}>Blick Tools</span>
-      {/* <ul id="filter" className="font-blickr flex gap-10 h-full absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center">
+    <header className={`${s.header} relative z-30 w-full flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 bg-surface border-b border-line`}>
+      <img src={logo} alt="Widget Studio" className="block h-[22px] w-auto" />
+      {/* <ul id="filter" className="font-sans flex gap-10 h-full absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center">
         <li 
           id="filter-all" 
           className={getFilterClasses('all')}
@@ -97,34 +95,43 @@ function Header({ onLogout, user, onEditTeams }) {
           </li>
         )}
       </ul> */}
-      {/* Éditer les effectifs — données de référence, à gauche du profil */}
-      <button
-        id="edit-teams-btn"
-        type="button"
-        onClick={onEditTeams}
-        className="text-blick hover:underline cursor-pointer absolute top-1/2 right-24 -translate-y-1/2 text-sm font-medium whitespace-nowrap"
-      >
-        Éditer les effectifs
-      </button>
-
-  <div id="menu-user" className="absolute top-0 right-0 h-full aspect-square" ref={menuUserRef}>
+      <div className="flex items-center gap-2">
+        {/* Éditer les effectifs — données de référence, à gauche du profil */}
         <button
-          id="menu-user-btn"
-          className="btn-white hover:bg-gray-200 btn-secondary h-full aspect-square border-l"
-          onClick={() => setMenuOpen((v) => !v)}
+          id="edit-teams-btn"
+          type="button"
+          onClick={onEditTeams}
+          className="inline-flex items-center min-h-[44px] px-2 text-[15px] font-medium text-ink hover:text-muted cursor-pointer whitespace-nowrap"
         >
-          <img src={iconUser} alt="Icon-add" className="absolute w-5 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+          Éditer les effectifs
         </button>
-        <ul
-          className={
-            `${s.menuUserItems} absolute bg-white py-2 -bottom-4 w-60 text-left right-4 rounded-xl shadow-lg${menuOpen ? ' ' + s.isVisible : ''}`
-          }
-        >
-          <li id="user-info" className="text-sm text-gray-400 border-b h-16 flex items-center px-4">
-            Connecté en tant que : {user?.email || 'Utilisateur inconnu'}
-          </li>
-          <li id="logout" className="hover:bg-gray-200 cursor-pointer h-12 flex items-center px-4" onClick={onLogout}>Déconnexion</li>
-        </ul>
+
+        <div id="menu-user" className="relative" ref={menuUserRef}>
+          <button
+            id="menu-user-btn"
+            type="button"
+            aria-label="Mon compte"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="flex items-center justify-center w-11 h-11 rounded-pill text-ink hover:bg-ground cursor-pointer"
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0" />
+            </svg>
+          </button>
+          <ul
+            className={
+              `${s.menuUserItems} absolute right-0 top-full mt-2 w-60 py-2 text-left bg-surface border border-line rounded-lg shadow-pop${menuOpen ? ' ' + s.isVisible : ''}`
+            }
+          >
+            <li id="user-info" className="text-sm text-muted border-b border-line min-h-16 py-3 flex items-center px-4 break-all">
+              Connecté en tant que : {user?.email || 'Utilisateur inconnu'}
+            </li>
+            <li id="logout" className="hover:bg-ground text-ink cursor-pointer h-12 flex items-center px-4" onClick={onLogout}>Déconnexion</li>
+          </ul>
+        </div>
       </div>
     </header>
   );

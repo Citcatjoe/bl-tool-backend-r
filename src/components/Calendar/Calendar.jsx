@@ -52,12 +52,12 @@ function Calendar({ calendar, docId, showAll, onSeeAllClick }) {
           return (
             <li key={index} className="flex items-center relative px-1.5 py-1.5">
               {/* Affichage de la date sous forme de jour et mois */}
-              <div className={`${s.eventDate} relative w-10 h-10 text-center font-blickb bg-white rounded mr-5 flex-shrink-0`}>
+              <div className={`${s.eventDate} relative w-10 h-10 text-center font-display bg-surface rounded mr-5 flex-shrink-0`}>
                 <span className={`${s.eventDateDay} absolute left-1/2 -translate-x-1/2 text-center text-xl`}>{day}</span>
                 <span className={`${s.eventDateMonth} absolute left-1/2 -translate-x-1/2 text-xs`}>{months[parseInt(month) - 1]}</span>
               </div>
               {/* Affichage de l'événement */}
-              <span className="grow font-blickb text-sm leading-tight">{item.event}</span>
+              <span className="grow font-display text-sm leading-tight">{item.event}</span>
             </li>
           );
         })}
@@ -67,7 +67,7 @@ function Calendar({ calendar, docId, showAll, onSeeAllClick }) {
       {!showAll && calendar.nbElemsToShow !== 'tous' && limit !== 100 && sortedDates.length > limit && (
         <span
           id="see-all"
-          className="font-i text-sm block w-16 -mt-5 mb-3 opacity-70 cursor-pointer hover:underline float-left"
+          className="font-sans text-sm block w-16 -mt-5 mb-3 opacity-70 cursor-pointer hover:underline float-left"
           onClick={onSeeAllClick} // Appel uniquement de la fonction passée en prop
         >
           Tout voir
@@ -76,10 +76,10 @@ function Calendar({ calendar, docId, showAll, onSeeAllClick }) {
 
       {/* Lien global (si défini dans `calendar`) */}
       {calendar.linkGlobalTxt && (
-        <span id="link-global" className="text-right font-i text-sm block -mt-5 mb-3 ml-auto">
+        <span id="link-global" className="text-right font-sans text-sm block -mt-5 mb-3 ml-auto">
           <a
             href={calendar.linkGlobalHref} // URL du lien global
-            className="underline text-blick font-semibold"
+            className="underline text-accent font-semibold"
             target={calendar.linkGlobalNewTab ? '_blank' : '_parent'} // Ouvrir dans un nouvel onglet si `linkGlobalNewTab` est vrai
             onClick={() => {
               incrementClickCounter(docId); // Appel de la fonction Firebase

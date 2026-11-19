@@ -137,7 +137,7 @@ function PortraitUploader({ value, onChange, focal, onFocalChange, disabled = fa
         >
           {/* Le `scale` du cadrage fait déborder l'image : le parent
               `overflow-hidden` la reclippe au cercle. */}
-          <img src={value} alt="" className="w-full h-full object-cover bg-gray-200" style={focalStyle(focal)} />
+          <img src={value} alt="" className="w-full h-full object-cover bg-ground" style={focalStyle(focal)} />
           {/* Voile + picto révélés au survol / focus seulement. */}
           <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 text-white opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity">
             {onFocalChange ? (
@@ -157,11 +157,11 @@ function PortraitUploader({ value, onChange, focal, onFocalChange, disabled = fa
           onClick={() => inputRef.current?.click()}
           disabled={disabled || uploading}
           title="Ajouter un portrait"
-          className="relative rounded-full flex-none overflow-hidden flex items-center justify-center border-2 border-dashed border-gray-300 text-gray-300 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="relative rounded-full flex-none overflow-hidden flex items-center justify-center border-2 border-dashed border-line text-muted hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           style={dim}
         >
           {uploading ? (
-            <span className="text-[10px] text-gray-400 animate-pulse">…</span>
+            <span className="text-[10px] text-muted animate-pulse">…</span>
           ) : (
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M12 8v8M8 12h8" />

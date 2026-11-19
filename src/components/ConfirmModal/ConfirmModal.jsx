@@ -5,22 +5,22 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, confirmText
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
-      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onCancel}></div>
+      <div className="fixed inset-0 bg-[color-mix(in_srgb,var(--ink)_50%,transparent)] transition-opacity" onClick={onCancel}></div>
       
-      <div className="bg-white rounded-2xl shadow-2xl z-10 p-6 max-w-md w-full mx-4 relative">
-        <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">{title}</h3>
-        <p className="text-base text-gray-600 text-center leading-relaxed">{message}</p>
+      <div className="bg-surface border border-line rounded-lg shadow-pop z-10 p-6 max-w-md w-full mx-4 relative">
+        <h3 className="title-lg text-ink mb-6 text-center">{title}</h3>
+        <p className="text-base text-muted text-center leading-relaxed">{message}</p>
         
         <div className="flex justify-end gap-2 mt-8">
           <button 
             onClick={onCancel}
-            className="w-1/2 px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+            className="w-1/2 h-11 px-4 text-ink font-medium bg-surface border border-line rounded-pill hover:bg-ground"
           >
             {cancelText}
           </button>
           <button 
             onClick={onConfirm}
-            className={`w-1/2 rounded-md font-bold transition-all duration-300 ${
+            className={`w-1/2 h-11 rounded-pill font-semibold transition-all duration-300 ${
               isDestructive ? 'btn-primary' : 'btn-primary'
             }`}
           >
