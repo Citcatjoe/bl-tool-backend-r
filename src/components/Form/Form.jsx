@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import s from './Form.module.scss';
 import PollForm from './PollForm';
-import CalendarForm, { SHOW_ADVANCED_DATE_OPTIONS } from './CalendarForm';
+import CalendarForm from './CalendarForm';
 import TeaserForm from './TeaserForm';
 import FolderForm from './FolderForm';
 import TinderForm from './TinderForm';
@@ -14,7 +14,13 @@ import NatinotesForm from './NatinotesForm';
 import { normalizeFocal } from '../../data/portraitFocal';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, runTransaction, Timestamp, getDoc } from 'firebase/firestore';
 import { db } from '@rms/services';
-import { transformWidgetData, validatePoll, buildPollSaveData } from '@rms/widget-model';
+import {
+  transformWidgetData,
+  validatePoll, buildPollSaveData,
+  validateCalendar, buildCalendarSaveData,
+  validateTinder, buildTinderSaveData,
+  validateQuiz, buildQuizSaveData
+} from '@rms/widget-model';
 import { getAuth } from 'firebase/auth';
 
 function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataChange, devMode }) {
@@ -242,102 +248,43 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         }
         
       } else if (formData.type === 'calendar') {
-        // Validation spécifique aux calendriers
-        if (!formData.theme) {
-          triggerValidationError('Rubrique');
-          return;
-        }
-        if (!formData.calName) {
-          triggerValidationError('Wording du calendrier');
-          return;
-        }
-        if (!formData.dates || formData.dates.length === 0) {
-          triggerValidationError('Dates');
-          return;
-        }
-
-        // Vérifier que toutes les dates ont un texte et une date de début
-        // Et si showBadge est true, une date de fin est requise
-        // (champs End / badges / lien live masqués : pas de validation sur des champs invisibles)
-        for (let i = 0; i < formData.dates.length; i++) {
-          const date = formData.dates[i];
-          if (!date.text || date.text.trim() === '') {
-            triggerValidationError(`Wording de la date ${i + 1}`);
-            return;
+        // Validation et préparation partagées avec l'API (@rms/widget-model).
+        // Les options avancées des dates (SHOW_ADVANCED_DATE_OPTIONS) ne sont pas gérées : les réactiver exige de les ajouter à packages/widget-model/calendar.js.
+        const calendarInput = {
+          theme: formData.theme,
+          title: formData.calName,
+          dates: (formData.dates || []).map(d => ({
+            text: d.text,
+            complement: d.complement,
+            start: d.date ? new Date(d.date) : null
+          })),
+          nbElemsToShow: (!formData.nbElements || formData.nbElements === 'tous') ? undefined : Number(formData.nbElements),
+          linkGlobal: { text: formData.linkGlobalTxt, href: formData.linkGlobalHref, newTab: !!formData.linkGlobalNewTab },
+          brand: formData.brand
+        };
+        const [firstError] = validateCalendar(calendarInput);
+        if (firstError) {
+          const dateMatch = firstError.field.match(/^dates\[(\d+)\](?:\.(\w+))?$/);
+          const calendarFieldLabels = {
+            theme: 'Rubrique',
+            title: 'Wording du calendrier',
+            dates: 'Dates',
+            nbElemsToShow: 'Nb. d\'éléments affichés',
+            'linkGlobal.href': 'Url du lien global',
+            'linkGlobal.text': 'Texte de lien global',
+            brand: 'Brand'
+          };
+          if (dateMatch) {
+            const n = Number(dateMatch[1]) + 1;
+            triggerValidationError(dateMatch[2] === 'start' ? `Start de la date ${n}` : `Wording de la date ${n}`);
+          } else {
+            triggerValidationError(calendarFieldLabels[firstError.field] || 'Url du lien global');
           }
-          if (!date.date) {
-            triggerValidationError(`Start de la date ${i + 1}`);
-            return;
-          }
-          if (SHOW_ADVANCED_DATE_OPTIONS && date.showBadge) {
-            if (!date.endDate) {
-              triggerValidationError(`Fin de la date ${i + 1}`);
-              return;
-            }
-            if (new Date(date.endDate) <= new Date(date.date)) {
-              triggerValidationError(`Fin de la date ${i + 1}`);
-              // Optionnel: On pourrait aussi afficher un message d'erreur spécifique pour indiquer pourquoi c'est invalide, 
-              // mais pour rester cohérent avec la fonction triggerValidationError qui met en surbrillance, 
-              // mettre en surbrillance la date de fin est la meilleure approche.
-              return;
-            }
-          }
-          if (SHOW_ADVANCED_DATE_OPTIONS && date.liveLinkEnabled && (!date.liveLinkUrl || date.liveLinkUrl.trim() === '')) {
-            triggerValidationError(`URL du live de la date ${i + 1}`);
-            return;
-          }
-        }
-
-        // Vérifier que linkGlobalTxt et linkGlobalHref sont mutuellement inclusifs
-        if (formData.linkGlobalTxt && !formData.linkGlobalHref) {
-          triggerValidationError('Url du lien global');
           return;
         }
-        if (!formData.linkGlobalTxt && formData.linkGlobalHref) {
-          triggerValidationError('Texte de lien global');
-          return;
-        }
-
-        const datesToSave = formData.dates.map(d => {
-           let scheduleStart = null;
-           let scheduleEnd = null;
-
-           if (d.date) {
-             const startDateObj = new Date(d.date);
-             if (!isNaN(startDateObj.getTime())) {
-               scheduleStart = Timestamp.fromDate(startDateObj);
-             }
-           }
-
-           if (d.endDate) {
-             const endDateObj = new Date(d.endDate);
-             if (!isNaN(endDateObj.getTime())) {
-               scheduleEnd = Timestamp.fromDate(endDateObj);
-             }
-           }
-           
-           return {
-             text: d.text,
-             complement: d.complement?.trim() || '',
-             scheduleStart: scheduleStart,
-             scheduleEnd: scheduleEnd,
-             showBadge: d.showBadge || false,
-             liveLinkExists: d.liveLinkEnabled || false,
-             liveLinkUrl: d.liveLinkEnabled ? d.liveLinkUrl : ''
-           };
-        });
 
         saveData = {
-          type: 'calendar',
-          calName: formData.calName,
-          calWording: formData.calWording || '', // Keeping as optional per implementation plan notes
-          nbElemsToShow: formData.nbElements === 'tous' ? 100 : (formData.nbElements || 100),
-          dates: datesToSave,
-          linkGlobalTxt: formData.linkGlobalTxt || '',
-          linkGlobalHref: formData.linkGlobalHref || '',
-          linkGlobalNewTab: formData.linkGlobalNewTab || false,
-          brand: formData.brand || 'blick',
-          theme: formData.theme,
+          ...buildCalendarSaveData(calendarInput, { toTimestamp: (d) => Timestamp.fromDate(d) }),
           timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
           timeUpdated: serverTimestamp(),
           counterSeeAllClicks: formMode === 'create' ? 0 : ((latestStats.seeAllClicks ?? legacyEmbed?.counterSeeAllClicks) || 0),
@@ -471,66 +418,41 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           saveData.deleted = false;
         }
       } else if (formData.type === 'tinder') {
-        // Validation spécifique aux tinder
-        if (!formData.theme) {
-          triggerValidationError('Rubrique');
-          return;
-        }
-        if (!formData.tinderLabel || formData.tinderLabel.trim() === '') {
-          triggerValidationError('Label du Tinder');
-          return;
-        }
-        if (!formData.tinderTitle || formData.tinderTitle.trim() === '') {
-          triggerValidationError('Titre du Tinder');
-          return;
-        }
-        if (!formData.tinderCards || formData.tinderCards.length < 1) {
-          triggerValidationError('Label de la carte #1');
-          return;
-        }
-        if (formData.tinderCards.length > 3) {
-          triggerValidationError('Label de la carte #1');
-          return;
-        }
-        // Vérifier que chaque carte a un label et un titre
-        for (let i = 0; i < formData.tinderCards.length; i++) {
-          const card = formData.tinderCards[i];
-          const hasLabel = card.tinderCardLabel && card.tinderCardLabel.trim() !== '';
-          const hasTitle = card.tinderCardTitle && card.tinderCardTitle.trim() !== '';
-          
-          if (!hasLabel) {
-            triggerValidationError(`Label de la carte #${i + 1}`);
-            return;
+        // Validation et préparation partagées avec l'API (@rms/widget-model)
+        const tinderInput = {
+          theme: formData.theme,
+          label: formData.tinderLabel,
+          title: formData.tinderTitle,
+          cards: Array.isArray(formData.tinderCards)
+            ? formData.tinderCards.map(c => ({ id: c.id, label: c.tinderCardLabel, title: c.tinderCardTitle }))
+            : formData.tinderCards,
+          // Légende affichée par défaut dans le formulaire
+          legend: formData.tinderLegend || { txt: '', display: true },
+          tinderVotes: formData.tinderVotes,
+          brand: formData.brand
+        };
+        const [firstError] = validateTinder(tinderInput);
+        if (firstError) {
+          const cardMatch = firstError.field.match(/^cards\[(\d+)\](?:\.(\w+))?$/);
+          const tinderFieldLabels = {
+            theme: 'Rubrique',
+            label: 'Label du Tinder',
+            title: 'Titre du Tinder',
+            cards: 'Label de la carte #1',
+            legend: 'Légende',
+            brand: 'Brand'
+          };
+          if (cardMatch) {
+            const n = Number(cardMatch[1]) + 1;
+            triggerValidationError(cardMatch[2] === 'title' ? `Titre de la carte #${n}` : `Label de la carte #${n}`);
+          } else {
+            triggerValidationError(tinderFieldLabels[firstError.field]);
           }
-          if (!hasTitle) {
-            triggerValidationError(`Titre de la carte #${i + 1}`);
-            return;
-          }
-        }
-        // Légende
-        const legend = formData.tinderLegend || { txt: '', display: true };
-        
-        if (legend.display && (!legend.txt || legend.txt.trim() === '')) {
-          triggerValidationError('Légende');
           return;
         }
 
         saveData = {
-          type: 'tinder',
-          tinderLabel: formData.tinderLabel,
-          tinderTitle: formData.tinderTitle,
-          tinderCards: formData.tinderCards.map(card => ({
-            id: card.id,
-            tinderCardLabel: card.tinderCardLabel,
-            tinderCardTitle: card.tinderCardTitle
-          })),
-          tinderVotes: formData.tinderVotes,
-          tinderLegend: {
-            txt: legend.txt || '',
-            display: legend.display ?? true,
-          },
-          brand: formData.brand || 'blick',
-          theme: formData.theme,
+          ...buildTinderSaveData(tinderInput),
           counterViews: formMode === 'create' ? 0 : (formData.counterViews ?? 0),
           timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
           timeUpdated: serverTimestamp()
@@ -540,122 +462,49 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           saveData.deleted = false;
         }
       } else if (formData.type === 'quiz') {
-        // Validation spécifique aux quiz
-        if (!formData.theme) {
-          triggerValidationError('Rubrique');
-          return;
-        }
-        // Validation minimale
-        if (!formData.title || formData.title.trim() === '') {
-          triggerValidationError('Titre du quiz');
-          return;
-        }
-
-        if (!formData.statsQuestions || !Array.isArray(formData.statsQuestions) || formData.statsQuestions.length !== formData.questions.length) {
-          triggerValidationError('Texte de la question #1');
-          return;
-        }
-
-        // Validation : chaque question doit avoir un texte non vide et ses réponses valides
-        if (!formData.questions || !Array.isArray(formData.questions) || formData.questions.length === 0) {
-          triggerValidationError('Texte de la question #1');
-          return;
-        }
-
-        for (let i = 0; i < formData.questions.length; i++) {
-          const q = formData.questions[i];
-          
-          // 1. Texte de la question
-          if (!q.text || q.text.trim() === '') {
-            triggerValidationError(`Texte de la question #${i + 1}`);
-            return;
-          }
-
-          // 2. Réponses (doivent être au nombre de 4 et toutes non vides)
-          if (!q.answers || q.answers.length !== 4) {
-            triggerValidationError(`Réponse 1 de la question #${i + 1}`);
-            return;
-          }
-
-          for (let aIdx = 0; aIdx < q.answers.length; aIdx++) {
-            const ans = q.answers[aIdx];
-            if (!ans.text || ans.text.trim() === '') {
-              triggerValidationError(`Réponse ${aIdx + 1} de la question #${i + 1}`);
-              return;
-            }
-          }
-
-          // 3. Cochez la réponse correcte
-          const hasCorrect = q.answers.some(ans => ans.isCorrect);
-          if (!hasCorrect) {
-            triggerValidationError(`Réponses possibles (Cochez la réponse correcte) #${i + 1}`);
-            return;
-          }
-        }
-
-        // Validation : les trois champs de conclusion doivent être remplis
-        const conclusion = formData.conclusion || { text1: '', text2: '', text3: '' };
-        if (!conclusion.text1 || conclusion.text1.trim() === '') {
-          triggerValidationError('Score : 0% - 33%');
-          return;
-        }
-        if (!conclusion.text2 || conclusion.text2.trim() === '') {
-          triggerValidationError('Score : 34% - 66%');
-          return;
-        }
-        if (!conclusion.text3 || conclusion.text3.trim() === '') {
-          triggerValidationError('Score : 67% - 100%');
-          return;
-        }
-
-        // Gestion de statsGlobal.scoreDistribution
-        let scoreDistribution = {};
-        const n = formData.questions.length;
-        let statsQuestionsToSave = formData.statsQuestions;
-        if (formMode === 'create') {
-          // Initialiser n+1 clés à 0
-          for (let i = 0; i <= n; i++) {
-            scoreDistribution[i] = 0;
-          }
-        } else if (formMode === 'edit') {
-          // Récupérer l'existant
-          const prevScoreDist = legacyEmbed?.statsGlobal?.scoreDistribution || {};
-          // Synchroniser toutes les clés de 0 à n
-          scoreDistribution = { ...prevScoreDist };
-          // Ajout des clés manquantes
-          for (let i = 0; i <= n; i++) {
-            if (!(i in scoreDistribution)) {
-              scoreDistribution[i] = 0;
-            }
-          }
-          // Suppression des clés en trop
-          Object.keys(scoreDistribution)
-            .map(k => parseInt(k))
-            .filter(k => k < 0 || k > n)
-            .forEach(k => { delete scoreDistribution[k]; });
-
-          // Préserver statsQuestions si le nombre de questions n'a pas changé, ou si c'est la nouvelle structure (objet)
-          if (legacyEmbed?.statsQuestions) {
-            if (Array.isArray(legacyEmbed.statsQuestions)) {
-              if (legacyEmbed.statsQuestions.length === n) {
-                statsQuestionsToSave = legacyEmbed.statsQuestions;
-              }
-            } else if (typeof legacyEmbed.statsQuestions === 'object') {
-              statsQuestionsToSave = legacyEmbed.statsQuestions;
-            }
-          }
-        }
-        saveData = {
-          type: 'quiz',
-          title: formData.title || '',
-          questions: formData.questions,
-          statsQuestions: statsQuestionsToSave,
-          statsGlobal: {
-            scoreDistribution,
-          },
-          conclusion,
-          brand: formData.brand || 'blick',
+        // Validation et préparation partagées avec l'API (@rms/widget-model).
+        // Les compteurs par id produits ici sont fusionnés avec Firestore en édition (transaction plus bas).
+        const quizInput = {
           theme: formData.theme,
+          title: formData.title,
+          questions: formData.questions,
+          conclusion: formData.conclusion,
+          brand: formData.brand
+        };
+        const [firstError] = validateQuiz(quizInput);
+        if (firstError) {
+          const { field } = firstError;
+          const questionMatch = field.match(/^questions\[(\d+)\](.*)$/);
+          const quizFieldLabels = {
+            theme: 'Rubrique',
+            title: 'Titre du quiz',
+            questions: 'Texte de la question #1',
+            'conclusion.text1': 'Score : 0% - 33%',
+            'conclusion.text2': 'Score : 34% - 66%',
+            'conclusion.text3': 'Score : 67% - 100%',
+            brand: 'Brand'
+          };
+          if (questionMatch) {
+            const n = Number(questionMatch[1]) + 1;
+            const rest = questionMatch[2];
+            const answerMatch = rest.match(/^\.answers\[(\d+)\]/);
+            if (answerMatch) {
+              triggerValidationError(`Réponse ${Number(answerMatch[1]) + 1} de la question #${n}`);
+            } else if (rest === '.answers') {
+              triggerValidationError(`Réponse 1 de la question #${n}`);
+            } else if (rest === '.correctAnswer') {
+              triggerValidationError(`Réponses possibles (Cochez la réponse correcte) #${n}`);
+            } else {
+              triggerValidationError(`Texte de la question #${n}`);
+            }
+          } else {
+            triggerValidationError(quizFieldLabels[field]);
+          }
+          return;
+        }
+
+        saveData = {
+          ...buildQuizSaveData(quizInput),
           timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
         };
         if (formMode === 'create') {

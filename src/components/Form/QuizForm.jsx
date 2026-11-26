@@ -16,6 +16,7 @@ function QuizForm({ currentEmbed, formMode, onChange }) {
   // Questions du quiz
   const [questions, setQuestions] = useState([
     {
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
       text: '',
       hint: '',
       img: '',
