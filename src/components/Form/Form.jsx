@@ -23,7 +23,9 @@ import {
   validateFolder, buildFolderSaveData, FOLDER_LABEL_COLORS,
   validateNatinotes, buildNatinotesSaveData,
   validatePotm, buildPotmSaveData, POTM_POSITIONS, potmPositionForCategory,
-  validateFacts, buildFactsSaveData, FACTS_ITEM_FIELDS
+  validateFacts, buildFactsSaveData, FACTS_ITEM_FIELDS,
+  validateProno, buildPronoSaveData,
+  validateTestimony, buildTestimonySaveData
 } from '@rms/widget-model';
 import { getAuth } from 'firebase/auth';
 
@@ -523,57 +525,37 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         // Toujours mettre à jour timeUpdated
         saveData.timeUpdated = serverTimestamp();
       } else if (formData.type === 'testimony') {
-        // Validation spécifique aux témoignages
-        if (!formData.theme) {
-          triggerValidationError('Rubrique');
-          return;
-        }
-
-        if (!formData.title || formData.title.trim() === '') {
-          triggerValidationError("Titre de la box");
-          return;
-        }
-
-        if (!formData.subject || formData.subject.trim() === '') {
-          triggerValidationError('Sujet');
-          return;
-        }
-
-        if (!formData.question || formData.question.trim() === '') {
-          triggerValidationError('Question');
-          return;
-        }
-
-        // Conversion de timeExpires en Timestamp Firebase si défini
-        let timeExpiresTimestamp = null;
-        if (formData.timeExpires && formData.timeExpires.trim() !== '') {
-          try {
-            // Convertir la string datetime-local en Date puis en Timestamp Firebase
-            const dateObj = new Date(formData.timeExpires);
-            if (!isNaN(dateObj.getTime())) {
-              timeExpiresTimestamp = Timestamp.fromDate(dateObj);
-            }
-          } catch (error) {
-            console.warn('Erreur lors de la conversion de timeExpires:', error);
-          }
-        }
-
-        saveData = {
-          type: 'testimony',
-          title: formData.title.trim(),
-          brand: formData.brand || 'blick',
+        // Validation et préparation partagées avec l'API (@rms/widget-model). La date limite
+        // (datetime-local) est lue à l'heure du navigateur, comme avant.
+        const testimonyInput = {
           theme: formData.theme,
-          subject: formData.subject.trim(),
-          question: formData.question.trim(),
-          timeExpires: timeExpiresTimestamp,
+          title: formData.title,
+          subject: formData.subject,
+          question: formData.question,
+          timeExpires: typeof formData.timeExpires === 'string' && formData.timeExpires.trim() !== ''
+            ? new Date(formData.timeExpires)
+            : undefined,
+          brand: formData.brand
+        };
+        const [firstError] = validateTestimony(testimonyInput);
+        if (firstError) {
+          const testimonyFieldLabels = { theme: 'Rubrique', title: 'Titre de la box', subject: 'Sujet', question: 'Question', timeExpires: 'Date limite de réponse', brand: 'Brand' };
+          triggerValidationError(testimonyFieldLabels[firstError.field]);
+          return;
+        }
+
+        const testimonySaveData = buildTestimonySaveData(testimonyInput, { toTimestamp: (d) => Timestamp.fromDate(d) });
+        saveData = {
+          ...testimonySaveData,
           timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
         };
-
         if (formMode === 'create') {
           saveData.author = currentUser.email;
           saveData.deleted = false;
-          saveData.counterViews = 0;
-          saveData.counterMsgSent = 0;
+        } else {
+          // En édition, les compteurs restent ceux de Firestore (_originalStats)
+          delete saveData.counterViews;
+          delete saveData.counterMsgSent;
         }
         // Toujours mettre à jour timeUpdated
         saveData.timeUpdated = serverTimestamp();
@@ -689,68 +671,39 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         }
         saveData.timeUpdated = serverTimestamp();
       } else if (formData.type === 'prono') {
-        // Validation spécifique aux pronostics
-        if (!formData.theme) {
-          triggerValidationError('Rubrique');
-          return;
-        }
-        if (!formData.pronoData || !formData.pronoData.event || (typeof formData.pronoData.event === 'string' && formData.pronoData.event.trim() === '')) {
-          triggerValidationError("Contexte");
-          return;
-        }
-        if (!formData.pronoData || !formData.pronoData.date) {
-          triggerValidationError("Date");
-          return;
-        }
-        if (!formData.pronoData || !formData.pronoData.item1 || !formData.pronoData.item1.name) {
-          triggerValidationError('Équipe 1');
-          return;
-        }
-        if (!formData.pronoData || !formData.pronoData.item2 || !formData.pronoData.item2.name) {
-          triggerValidationError('Équipe 2');
-          return;
-        }
-
-        // Conversion Date -> Timestamp
-        let pronoDateTimestamp = null;
-        if (formData.pronoData.date) {
-            try {
-                // Si c'est déjà un objet Date (venant de PronoForm)
-                if (formData.pronoData.date instanceof Date) {
-                    pronoDateTimestamp = Timestamp.fromDate(formData.pronoData.date);
-                } 
-                // Si c'est une string (devrait pas arriver avec le new PronoForm mais sécurité)
-                else if (typeof formData.pronoData.date === 'string') {
-                    const d = new Date(formData.pronoData.date);
-                    if (!isNaN(d.getTime())) {
-                        pronoDateTimestamp = Timestamp.fromDate(d);
-                    }
-                }
-            } catch (e) {
-                console.warn("Erreur date prono", e);
-            }
-        }
-
-        saveData = {
-          type: 'prono',
-          pronoData: {
-              ...formData.pronoData,
-              date: pronoDateTimestamp,
-              // Initialisation des votes à 1 lors de la création
-              item1: {
-                  ...formData.pronoData.item1,
-                  votes: formMode === 'create' ? 1 : (formData.pronoData.item1.votes || 0)
-              },
-              item2: {
-                  ...formData.pronoData.item2,
-                  votes: formMode === 'create' ? 1 : (formData.pronoData.item2.votes || 0)
-              },
-              item3: { // Draw
-                  votes: formMode === 'create' ? 1 : (formData.pronoData.item3?.votes || 0)
-              }
-          },
-          brand: formData.brand || 'blick',
+        // Validation et préparation partagées avec l'API (@rms/widget-model). Les couleurs des
+        // barres choisies dans PronoForm remplacent celles des équipes (teams.json).
+        const pronoData = formData.pronoData || {};
+        const pronoInput = {
           theme: formData.theme,
+          event: pronoData.event,
+          date: pronoData.date || undefined,
+          team1: pronoData.item1?.name,
+          team2: pronoData.item2?.name,
+          color1: pronoData.item1?.color,
+          color2: pronoData.item2?.color,
+          brand: formData.brand
+        };
+        const [firstError] = validateProno(pronoInput);
+        if (firstError) {
+          const pronoFieldLabels = { theme: 'Rubrique', event: 'Contexte', date: 'Date', team1: 'Équipe 1', team2: 'Équipe 2', brand: 'Brand' };
+          if (firstError.field === 'color1' || firstError.field === 'color2') {
+            triggerValidationError('Couleur de la barre', undefined, firstError.field === 'color1' ? 0 : 1);
+          } else {
+            triggerValidationError(pronoFieldLabels[firstError.field]);
+          }
+          return;
+        }
+
+        const pronoSaveData = buildPronoSaveData(pronoInput, { toTimestamp: (d) => Timestamp.fromDate(d) });
+        if (formMode === 'edit') {
+          // Votes chargés avec le widget ; la transaction plus bas relit Firestore
+          ['item1', 'item2', 'item3'].forEach((key) => {
+            pronoSaveData.pronoData[key].votes = pronoData[key]?.votes || 0;
+          });
+        }
+        saveData = {
+          ...pronoSaveData,
           counterViews: formMode === 'create' ? 0 : (legacyEmbed?.counterViews || 0),
           timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
         };

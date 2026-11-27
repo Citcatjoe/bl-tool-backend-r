@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { POTM_TEAMS as teamsData } from '@rms/widget-model';
-import competitionsData from '../../data/competitions.json';
+import { POTM_TEAMS as teamsData, PRONO_COMPETITIONS as competitionsData } from '@rms/widget-model';
 
 function PronoForm({ currentEmbed, formMode, onChange }) {
   // States
