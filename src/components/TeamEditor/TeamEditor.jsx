@@ -4,7 +4,7 @@ import BlackOverlay from '../BlackOverlay/BlackOverlay';
 import PortraitUploader from '../PortraitUploader';
 import FieldHint from '../FieldHint';
 import { slugifyPlayerName, teamIdFor, byTeamOrder } from '../../data/teams';
-import { DEFAULT_FOCAL } from '../../data/portraitFocal';
+import { DEFAULT_FOCAL } from '@rms/widget-model';
 
 function TeamEditor({ isOpen, teamId, onClose }) {
   const [teams, setTeams] = useState([]);

@@ -39,6 +39,10 @@ function App() {
     // Modale de choix du type de widget à créer (remplace l'ancien menu « + »)
     const [newPickerOpen, setNewPickerOpen] = useState(false);
     const [teamEditorOpen, setTeamEditorOpen] = useState(false);
+    // Ouverture de l'éditeur des effectifs via `?teams` ou `?teams=<teamId>` (lien depuis le Hub Rédaction).
+    // `null` : pas de demande ; '' : éditeur sans équipe imposée ; sinon id de l'équipe à afficher.
+    const [teamsRequestId, setTeamsRequestId] = useState(() => new URLSearchParams(window.location.search).get('teams'));
+    const [editorTeamId, setEditorTeamId] = useState(null);
     const [embeds, setEmbeds] = useState([]);
     const [embedsLoaded, setEmbedsLoaded] = useState(false); // liste déjà chargée (une fois / live)
     // Ouverture d'un widget en édition via `?edit=<id>` (lien depuis le Hub Rédaction).
@@ -196,6 +200,26 @@ function App() {
         setEditRequestId(null);
     }, [user, embedsLoaded, embeds, editRequestId]);
 
+    // `?teams[=<teamId>]` : après connexion, ouvrir l'éditeur des effectifs (sur l'équipe demandée
+    // si elle existe, sinon sur la première). Le paramètre reste dans l'adresse tant qu'on n'est pas connecté.
+    useEffect(() => {
+        if (!user || teamsRequestId === null) return;
+
+        // Retirer le paramètre pour qu'un rechargement ne rouvre pas l'éditeur.
+        const url = new URL(window.location.href);
+        url.searchParams.delete('teams');
+        window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+
+        setEditorTeamId(teamsRequestId || null);
+        setTeamEditorOpen(true);
+        setTeamsRequestId(null);
+    }, [user, teamsRequestId]);
+
+    const handleCloseTeamEditor = () => {
+        setTeamEditorOpen(false);
+        setEditorTeamId(null);
+    };
+
     const handleCloseForm = () => {
         setFormVisible(false);
         setTimeout(() => {
@@ -303,8 +327,8 @@ function App() {
             {/* Édition des catalogues de joueurs — données de référence, hors widgets */}
             <TeamEditor
                 isOpen={teamEditorOpen}
-                teamId={null}
-                onClose={() => setTeamEditorOpen(false)}
+                teamId={editorTeamId}
+                onClose={handleCloseTeamEditor}
             />
 
             <Header

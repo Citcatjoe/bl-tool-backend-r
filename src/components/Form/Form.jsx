@@ -11,7 +11,6 @@ import PotmForm from './PotmForm';
 import PronoForm from './PronoForm';
 import FactsForm from './FactsForm';
 import NatinotesForm from './NatinotesForm';
-import { normalizeFocal } from '../../data/portraitFocal';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, runTransaction, Timestamp, getDoc } from 'firebase/firestore';
 import { db } from '@rms/services';
 import {
@@ -19,9 +18,35 @@ import {
   validatePoll, buildPollSaveData,
   validateCalendar, buildCalendarSaveData,
   validateTinder, buildTinderSaveData,
-  validateQuiz, buildQuizSaveData
+  validateQuiz, buildQuizSaveData,
+  validateTeaser, buildTeaserSaveData,
+  validateFolder, buildFolderSaveData, FOLDER_LABEL_COLORS,
+  validateNatinotes, buildNatinotesSaveData,
+  validatePotm, buildPotmSaveData, POTM_POSITIONS, potmPositionForCategory,
+  validateFacts, buildFactsSaveData, FACTS_ITEM_FIELDS
 } from '@rms/widget-model';
 import { getAuth } from 'firebase/auth';
+
+/**
+ * Intitulé affiché par FactsForm pour le champ `key` d'un fait marquant (sert à surligner le champ
+ * fautif d'une erreur `items[i].<key>`) ; `null` si ce type n'affiche pas ce champ.
+ */
+function factsItemLabel(item, key) {
+  const type = item?.type;
+  if (key === 'type') return 'Type';
+  if (!FACTS_ITEM_FIELDS[type]?.includes(key)) return null;
+  switch (key) {
+    case 'icon': return 'Icône';
+    case 'title': return type === 'rating' ? 'Question posée' : 'Titre';
+    case 'text': return type === 'quote' ? 'Citation' : type === 'number' ? 'Description' : 'Contenu';
+    case 'author': return 'Auteur de la citation';
+    case 'caption': return 'Crédit';
+    case 'src': return 'Image';
+    case 'picture': return 'Personne détourée';
+    case 'value': return 'Le chiffre';
+    default: return null;
+  }
+}
 
 function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataChange, devMode }) {
   const [formData, setFormData] = useState({});
@@ -307,116 +332,96 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         }
         
       } else if (formData.type === 'teaser') {
-        // Validation spécifique aux teasers
-        if (!formData.theme) {
-          triggerValidationError('Rubrique');
-          return;
-        }
-        if (!formData.teaserLabel) {
-          triggerValidationError('Label du teaser');
-          return;
-        }
-        if (!formData.teaserTitle) {
-          triggerValidationError('Titre du teaser');
-          return;
-        }
-        if (!formData.img) {
-          triggerValidationError('Image');
-          return;
-        }
-        if (!formData.linkGlobalTxt) {
-          triggerValidationError('Label du bouton');
-          return;
-        }
-        if (!formData.linkGlobalHref) {
-          triggerValidationError('Lien du bouton');
+        // Validation et préparation partagées avec l'API (@rms/widget-model).
+        // TeaserForm remonte le titre avec des `\n` littéraux : on rend les vrais retours à la ligne.
+        const teaserInput = {
+          theme: formData.theme,
+          label: formData.teaserLabel,
+          title: typeof formData.teaserTitle === 'string' ? formData.teaserTitle.replace(/\\n/g, '\n') : formData.teaserTitle,
+          img: formData.img,
+          button: { text: formData.linkGlobalTxt, href: formData.linkGlobalHref, newTab: !!formData.linkGlobalNewTab },
+          brand: formData.brand
+        };
+        const [firstError] = validateTeaser(teaserInput);
+        if (firstError) {
+          const teaserFieldLabels = {
+            theme: 'Rubrique',
+            label: 'Label du teaser',
+            title: 'Titre du teaser',
+            img: 'Image du teaser',
+            'button.text': 'Label du bouton',
+            'button.href': 'Lien du bouton',
+            'button.newTab': 'Ouvrir dans un nouvel onglet',
+            brand: 'Brand'
+          };
+          triggerValidationError(teaserFieldLabels[firstError.field]);
           return;
         }
 
         saveData = {
-          type: 'teaser',
-          teaserLabel: formData.teaserLabel,
-          teaserTitle: formData.teaserTitle,
-          linkGlobalTxt: formData.linkGlobalTxt || '',
-          linkGlobalHref: formData.linkGlobalHref || '',
-          linkGlobalNewTab: formData.linkGlobalNewTab || false,
-          img: formData.img || '',
-          brand: formData.brand || 'blick',
-          theme: formData.theme,
+          ...buildTeaserSaveData(teaserInput),
           timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
           timeUpdated: serverTimestamp()
         };
-        
-        // L'auteur et le champ deleted ne sont définis que lors de la création
+
         if (formMode === 'create') {
           saveData.author = currentUser.email;
           saveData.deleted = false;
-          saveData.counterViews = 0;
-          saveData.counterClicks = 0;
+        } else {
+          // En édition, les compteurs existants viennent de Firestore (_originalStats)
+          delete saveData.counterViews;
+          delete saveData.counterClicks;
         }
         
       } else if (formData.type === 'folder') {
-        // Validation spécifique aux dossiers
-        if (!formData.theme) {
-          triggerValidationError('Rubrique');
-          return;
-        }
-        if (!formData.folderLabel) {
-          triggerValidationError('Label du dossier');
-          return;
-        }
-        if (!formData.folderName) {
-          triggerValidationError('Titre du dossier');
-          return;
-        }
-        
-        if (!formData.img || formData.img.trim() === '') {
-          triggerValidationError('Image du dossier');
-          return;
-        }
-
-        // Vérifier que chaque bouton présent est entièrement rempli
-        if (!formData.buttons || formData.buttons.length === 0) {
-          triggerValidationError('Texte du bouton #1');
-          return;
-        }
-
-        for (let i = 0; i < formData.buttons.length; i++) {
-          const btn = formData.buttons[i];
-          const hasTxt = btn.buttonTxt && btn.buttonTxt.trim() !== '';
-          const hasUrl = btn.buttonUrl && btn.buttonUrl.trim() !== '';
-          
-          if (!hasTxt) {
-            triggerValidationError(`Texte du bouton #${i + 1}`);
-            return;
-          }
-          if (!hasUrl) {
-            triggerValidationError(`Url du bouton #${i + 1}`);
-            return;
-          }
-        }
-
-        const validButtons = formData.buttons; // Tous les boutons sont valides à ce stade
-
-        saveData = {
-          type: 'folder',
-          folderName: formData.folderName,
-          folderLabel: formData.folderLabel,
-          folderLabelColor: formData.folderLabelColor || 'bg-brand',
-          img: formData.img || '',
-          buttons: validButtons.map(button => ({
-            id: button.id || crypto.randomUUID(),
-            buttonTxt: button.buttonTxt.trim(),
-            buttonUrl: button.buttonUrl.trim(),
-            buttonOpensNewTab: button.buttonOpensNewTab || false,
-            buttonCounterClicks: button.buttonCounterClicks || 0
-          })),
-          brand: formData.brand || 'blick',
+        // Validation et préparation partagées avec l'API (@rms/widget-model).
+        // FolderForm remonte le titre avec des `\n` littéraux et la couleur en classe (`bg-brand`).
+        const folderLabelColor = Object.keys(FOLDER_LABEL_COLORS).find((key) => FOLDER_LABEL_COLORS[key] === formData.folderLabelColor);
+        const folderInput = {
           theme: formData.theme,
+          label: formData.folderLabel,
+          labelColor: formData.folderLabelColor ? (folderLabelColor ?? formData.folderLabelColor) : undefined,
+          name: typeof formData.folderName === 'string' ? formData.folderName.replace(/\\n/g, '\n') : formData.folderName,
+          img: formData.img,
+          buttons: Array.isArray(formData.buttons)
+            ? formData.buttons.map(b => ({ id: b.id, text: b.buttonTxt, href: b.buttonUrl, newTab: !!b.buttonOpensNewTab }))
+            : formData.buttons,
+          brand: formData.brand
+        };
+        const [firstError] = validateFolder(folderInput);
+        if (firstError) {
+          const buttonMatch = firstError.field.match(/^buttons\[(\d+)\](?:\.(\w+))?$/);
+          const folderFieldLabels = {
+            theme: 'Rubrique',
+            label: 'Label du dossier',
+            labelColor: 'Couleur du label',
+            name: 'Titre du dossier',
+            img: 'Image du dossier',
+            buttons: 'Texte du bouton #1',
+            brand: 'Brand'
+          };
+          if (buttonMatch) {
+            const n = Number(buttonMatch[1]) + 1;
+            triggerValidationError(buttonMatch[2] === 'href' ? `Url du bouton #${n}` : `Texte du bouton #${n}`);
+          } else {
+            triggerValidationError(folderFieldLabels[firstError.field]);
+          }
+          return;
+        }
+
+        const folderSaveData = buildFolderSaveData(folderInput);
+        if (formMode === 'edit') {
+          // Compteur par bouton : celui chargé avec le widget ; la transaction plus bas relit Firestore
+          folderSaveData.buttons.forEach((button, index) => {
+            button.buttonCounterClicks = formData.buttons[index].buttonCounterClicks || 0;
+          });
+        }
+        saveData = {
+          ...folderSaveData,
           timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
           timeUpdated: serverTimestamp()
         };
-        
+
         // L'auteur et le champ deleted ne sont définis que lors de la création
         if (formMode === 'create') {
           saveData.author = currentUser.email;
@@ -573,89 +578,54 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         // Toujours mettre à jour timeUpdated
         saveData.timeUpdated = serverTimestamp();
       } else if (formData.type === 'potm') {
-        // Validation spécifique au joueur du match
-        if (!formData.theme) {
-          triggerValidationError('Rubrique');
-          return;
-        }
-
-        if (!formData.context || !formData.context.context) {
-          triggerValidationError('Contexte');
-          return;
-        }
-        if (!formData.context.category) {
-          triggerValidationError('Catégorie');
-          return;
-        }
-
-        if (!formData.context.text || formData.context.text.trim() === '') {
-          triggerValidationError('Label du match');
-          return;
-        }
-
-        if (!formData.context.date || (typeof formData.context.date === 'string' && formData.context.date.trim() === '')) {
-          triggerValidationError('Date du match');
-          return;
-        }
-
-        if (!formData.players || !Array.isArray(formData.players) || formData.players.length < 2) {
-          triggerValidationError('Candidats');
-          return;
-        }
-
-        // Vérifier que tous les joueurs ont un nom
-        for (let i = 0; i < formData.players.length; i++) {
-          const player = formData.players[i];
-          if (!player.name || player.name.trim() === '') {
-            triggerValidationError(`Nom du joueur #${i + 1}`);
-            return;
-          }
-        }
-
-        const validPlayers = formData.players;
-
-        // Conversion de la date en Timestamp Firebase
-        let matchDateTimestamp = null;
-        try {
-          // Ajouter l'heure à midi pour avoir un timestamp complet
-          const dateObj = new Date(formData.context.date + 'T12:00:00');
-          if (!isNaN(dateObj.getTime())) {
-            matchDateTimestamp = Timestamp.fromDate(dateObj);
-          }
-        } catch (error) {
-          console.warn('Erreur lors de la conversion de la date:', error);
-          triggerValidationError('Date du match');
-          return;
-        }
-
-        // Préserver les votes existants en mode édition
-        const playersToSave = validPlayers.map((player) => {
-          // Les votes sont déjà présents dans l'objet player du formulaire
-          // car PotmForm les charge depuis currentEmbed en mode édition
-          return {
-            id: player.id, // Préserver l'ID pour le matching futur
-            name: player.name.trim(),
-            position: player.position,
-            team: player.team,
-            code: player.code || '',
-            color: player.color || '#000000',
-            type: player.type || 'national',
-            img: player.img ?? null,
-            votes: player.votes || 0,
-          };
-        });
-
-        saveData = {
-          type: 'potm',
-          context: {
-            context: formData.context.context,
-            category: formData.context.category,
-            text: formData.context.text.trim(),
-            date: matchDateTimestamp
-          },
-          players: playersToSave,
-          brand: formData.brand || 'blick',
+        // Validation et préparation partagées avec l'API (@rms/widget-model).
+        // PotmForm remonte le poste déjà accordé (« Attaquante ») : on repasse au poste neutre,
+        // `buildPotmSaveData` l'accorde de nouveau selon la catégorie.
+        const potmContext = formData.context || {};
+        const potmDate = typeof potmContext.date === 'string' && potmContext.date.trim() !== ''
+          ? new Date(potmContext.date + 'T12:00:00')
+          : undefined;
+        const potmInput = {
           theme: formData.theme,
+          context: potmContext.context,
+          category: potmContext.category,
+          text: potmContext.text,
+          date: potmDate,
+          players: Array.isArray(formData.players)
+            ? formData.players.map((player) => ({
+              id: player.id,
+              name: player.name,
+              position: POTM_POSITIONS.find((position) => potmPositionForCategory(position, 'Dames') === player.position) || player.position,
+              team: player.team
+            }))
+            : formData.players,
+          brand: formData.brand
+        };
+        const [firstError] = validatePotm(potmInput);
+        if (firstError) {
+          const playerMatch = firstError.field.match(/^players\[(\d+)\](?:\.(\w+))?$/);
+          const potmFieldLabels = { theme: 'Rubrique', context: 'Contexte', category: 'Catégorie', text: 'Label du match', date: 'Date du match', players: 'Candidats', brand: 'Brand' };
+          if (playerMatch && playerMatch[2] === 'position') {
+            triggerValidationError('Position', undefined, Number(playerMatch[1]));
+          } else if (playerMatch && playerMatch[2] === 'team') {
+            triggerValidationError('Équipe', undefined, Number(playerMatch[1]));
+          } else if (playerMatch) {
+            triggerValidationError(`Nom du joueur #${Number(playerMatch[1]) + 1}`);
+          } else {
+            triggerValidationError(potmFieldLabels[firstError.field]);
+          }
+          return;
+        }
+
+        const potmSaveData = buildPotmSaveData(potmInput, { toTimestamp: (d) => Timestamp.fromDate(d) });
+        if (formMode === 'edit') {
+          // Votes par candidat : ceux chargés avec le widget ; la transaction plus bas relit Firestore
+          potmSaveData.players.forEach((player, index) => {
+            player.votes = formData.players[index].votes || 0;
+          });
+        }
+        saveData = {
+          ...potmSaveData,
           counterViews: formMode === 'create' ? 0 : (legacyEmbed?.counterViews || 0),
           timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
         };
@@ -667,68 +637,48 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         // Toujours mettre à jour timeUpdated
         saveData.timeUpdated = serverTimestamp();
       } else if (formData.type === 'natinotes') {
-        // Validation spécifique aux notes des joueurs
-        if (!formData.theme) {
-          triggerValidationError('Rubrique');
-          return;
-        }
-        if (!formData.title || formData.title.trim() === '') {
-          triggerValidationError('Événement');
-          return;
-        }
-        if (!Array.isArray(formData.players) || formData.players.length < 1) {
-          triggerValidationError('Ajouter des joueurs');
-          return;
-        }
-
-        // Note Blick et paragraphe sont obligatoires pour chaque joueur.
-        // `index` cible le label du joueur fautif (les cartes partagent les
-        // mêmes intitulés) plutôt que le premier de la liste.
-        for (let index = 0; index < formData.players.length; index++) {
-          const player = formData.players[index];
-          if (!player.name || player.name.trim() === '') {
+        // Validation et préparation partagées avec l'API (@rms/widget-model). L'identité des joueurs
+        // (nom, équipe, portrait, cadrage) est recopiée des effectifs chargés par NatinotesForm ; en
+        // édition, les joueurs déjà enregistrés restent admis (même archivés) avec leur instantané.
+        const natinotesInput = {
+          theme: formData.theme,
+          title: formData.title,
+          // `label` n'est plus saisi ; on préserve celui des widgets déjà publiés
+          label: formData.label ?? legacyEmbed?.label,
+          players: Array.isArray(formData.players)
+            ? formData.players.map((player) => ({
+              id: player.id,
+              blickRating: player.blickRating === '' || player.blickRating == null ? undefined : Number(player.blickRating),
+              comment: player.comment
+            }))
+            : formData.players,
+          showRecap: formData.showRecap !== false,
+          brand: formData.brand
+        };
+        const natinotesDeps = {
+          teams: formData.teams || [],
+          previousPlayers: formMode === 'edit' ? (legacyEmbed?.players || []) : []
+        };
+        const [firstError] = validateNatinotes(natinotesInput, natinotesDeps);
+        if (firstError) {
+          // `index` cible le label du joueur fautif (les cartes partagent les mêmes intitulés)
+          const playerMatch = firstError.field.match(/^players\[(\d+)\](?:\.(\w+))?$/);
+          const natinotesFieldLabels = { theme: 'Rubrique', title: 'Événement', players: 'Ajouter des joueurs', showRecap: 'Récap des avis', brand: 'Brand' };
+          if (playerMatch && playerMatch[2] === 'blickRating') {
+            triggerValidationError('Note Blick', undefined, Number(playerMatch[1]));
+          } else if (playerMatch && playerMatch[2] === 'comment') {
+            triggerValidationError('Paragraphe', undefined, Number(playerMatch[1]));
+          } else if (playerMatch) {
+            // Joueur inconnu, archivé ou en double (le picker les écarte déjà à la saisie)
             triggerValidationError('Ajouter des joueurs');
-            return;
+          } else {
+            triggerValidationError(natinotesFieldLabels[firstError.field]);
           }
-          if (!player.blickRating) {
-            triggerValidationError('Note Blick', undefined, index);
-            return;
-          }
-          if (!player.comment || player.comment.trim() === '') {
-            triggerValidationError('Paragraphe', undefined, index);
-            return;
-          }
-        }
-
-        // L'id est la clé de stats.playerRatings : il doit être unique dans le widget
-        const natinotesIds = formData.players.map((p) => p.id);
-        if (new Set(natinotesIds).size !== natinotesIds.length) {
-          triggerValidationError('Joueurs (doublon)');
           return;
         }
-
-        const natinotesPlayers = formData.players.map((player) => ({
-          id: player.id,
-          name: player.name.trim(),
-          // Le nom d'équipe vient du catalogue ; plus de valeur par défaut
-          // depuis que les équipes sont créées librement dans le backend.
-          team: player.team || '',
-          img: player.img ?? null,
-          // Cadrage du portrait gelé avec l'image ; borné avant écriture.
-          focal: normalizeFocal(player.focal),
-          blickRating: Number(player.blickRating),
-          comment: player.comment,
-        }));
 
         saveData = {
-          type: 'natinotes',
-          title: formData.title.trim(),
-          // `label` n'est plus saisi ; on préserve celui des widgets déjà publiés
-          label: (formData.label ?? legacyEmbed?.label ?? '').trim(),
-          players: natinotesPlayers,
-          showRecap: formData.showRecap !== false,
-          brand: formData.brand || 'blick',
-          theme: formData.theme,
+          ...buildNatinotesSaveData(natinotesInput, natinotesDeps),
           counterViews: formMode === 'create' ? 0 : (legacyEmbed?.counterViews || 0),
           timeCreated: formMode === 'create' ? serverTimestamp() : legacyEmbed.timeCreated,
         };
@@ -811,128 +761,52 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         }
         saveData.timeUpdated = serverTimestamp();
       } else if (formData.type === 'facts') {
-        if (!formData.theme) {
-          triggerValidationError('Rubrique');
+        // Validation et préparation partagées avec l'API (@rms/widget-model). FactsForm garde dans
+        // chaque élément les champs des types essayés : seuls ceux du type choisi sont transmis.
+        const factsFormData = formData.factsData || {};
+        const factsItems = Array.isArray(factsFormData.items)
+          ? factsFormData.items.map((item) => {
+            const fields = FACTS_ITEM_FIELDS[item?.type];
+            if (!fields) return item;
+            const input = { id: item.id, type: item.type };
+            fields.forEach((key) => {
+              if (key === 'value') input.value = item.value === '' || item.value == null ? undefined : Number(item.value);
+              else input[key] = item[key];
+            });
+            return input;
+          })
+          : factsFormData.items;
+        const factsInput = {
+          theme: formData.theme,
+          title: factsFormData.rencontre,
+          date: typeof factsFormData.date === 'string' && factsFormData.date.trim() !== ''
+            ? new Date(factsFormData.date + 'T12:00:00')
+            : undefined,
+          items: factsItems,
+          // ratingStats chargées avec le widget (ou `null` si la note du match a été retirée)
+          ratingStats: formData.ratingStats !== undefined ? formData.ratingStats : formData.voteStats,
+          brand: formData.brand
+        };
+        const [firstError] = validateFacts(factsInput);
+        if (firstError) {
+          const itemMatch = firstError.field.match(/^items\[(\d+)\](?:\.(\w+))?$/);
+          const factsFieldLabels = { theme: 'Rubrique', title: 'Rencontre', date: 'Date', items: 'Faits marquants', brand: 'Brand' };
+          if (itemMatch && itemMatch[2]) {
+            // Les éléments partagent les mêmes intitulés : on cible celui de l'élément fautif
+            const index = Number(itemMatch[1]);
+            const label = factsItemLabel(factsItems[index], itemMatch[2]);
+            const occurrence = factsItems.slice(0, index).filter((item) => factsItemLabel(item, itemMatch[2]) === label).length;
+            triggerValidationError(label || 'Faits marquants', undefined, label ? occurrence : 0);
+          } else {
+            triggerValidationError(itemMatch ? 'Faits marquants' : factsFieldLabels[firstError.field]);
+          }
           return;
         }
-        if (!formData.factsData || !formData.factsData.rencontre || formData.factsData.rencontre.trim() === '') {
-          triggerValidationError('Rencontre');
-          return;
-        }
-        if (!formData.factsData.date || formData.factsData.date.trim() === '') {
-          triggerValidationError('Date');
-          return;
-        }
-
-        let factsDateTimestamp = null;
-        try {
-          // Ajouter l'heure à midi pour avoir un timestamp complet
-          const dateObj = new Date(formData.factsData.date + 'T12:00:00');
-          if (!isNaN(dateObj.getTime())) {
-            factsDateTimestamp = Timestamp.fromDate(dateObj);
-          }
-        } catch (error) {
-          console.warn('Erreur lors de la conversion de la date:', error);
-          triggerValidationError('Date');
-          return;
-        }
-
-        // Validation stricte des attributs requis par type d'item
-        for (let i = 0; i < formData.factsData.items.length; i++) {
-          const item = formData.factsData.items[i];
-
-          if (!item.title || item.title.trim() === '') {
-             triggerValidationError('Titre');
-             return;
-          }
-
-          if (item.type === 'normal') {
-             if (!item.text || item.text.trim() === '') {
-                triggerValidationError('Contenu');
-                return;
-             }
-          }
-
-          if (item.type === 'quote') {
-             if (!item.text || item.text.trim() === '') {
-                triggerValidationError('Citation');
-                return;
-             }
-             if (!item.author || item.author.trim() === '') {
-                triggerValidationError('Auteur');
-                return;
-             }
-          }
-
-          if (item.type === 'picture') {
-             if (!item.src || item.src.trim() === '') {
-                triggerValidationError('Image');
-                return;
-             }
-             if (!item.text || item.text.trim() === '') {
-                triggerValidationError('Contenu');
-                return;
-             }
-             if (!item.caption || item.caption.trim() === '') {
-                triggerValidationError('Crédit');
-                return;
-             }
-          }
-
-          if (item.type === 'number') {
-             if (item.value === undefined || item.value === null || item.value === '') {
-                triggerValidationError('Chiffre');
-                return;
-             }
-             if (!item.text || item.text.trim() === '') {
-                triggerValidationError('Description');
-                return;
-             }
-          }
-        }
-
-        const itemsToSave = formData.factsData.items.map(item => {
-          const baseItem = {
-            id: item.id || crypto.randomUUID(),
-            icon: item.icon || '',
-            title: item.title || '',
-            type: item.type || 'normal',
-            text: item.text || '',
-            votes: item.votes || 0,
-          };
-          if (item.type === 'quote') {
-             baseItem.author = item.author || '';
-             if (item.picture) baseItem.picture = item.picture;
-          }
-          if (item.type === 'picture') {
-             baseItem.caption = item.caption || '';
-             if (item.src) baseItem.src = item.src;
-          }
-          if (item.type === 'number') baseItem.value = item.value || 0;
-          return baseItem;
-        });
 
         saveData = {
-          type: 'facts',
-          brand: formData.brand || 'blick',
-          theme: formData.theme,
+          ...buildFactsSaveData(factsInput, { toTimestamp: (d) => Timestamp.fromDate(d) }),
           counterViews: formMode === 'create' ? 0 : (legacyEmbed?.counterViews || 0)
         };
-
-        const factsDataObj = {
-          rencontre: formData.factsData.rencontre,
-          date: factsDateTimestamp,
-          items: itemsToSave
-        };
-
-        saveData.factsData = factsDataObj;
-
-        // Handle ratingStats (or legacy voteStats)
-        if (formData.ratingStats !== undefined) {
-          saveData.ratingStats = formData.ratingStats;
-        } else if (formData.voteStats !== undefined) {
-          saveData.ratingStats = formData.voteStats;
-        }
 
         if (formMode === 'create') {
           saveData.author = currentUser.email;

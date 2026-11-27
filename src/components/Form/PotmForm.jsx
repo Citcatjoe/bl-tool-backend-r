@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import teamsData from '../../data/teams.json';
-import contextsData from '../../data/contexts.json';
+import { POTM_TEAMS as teamsData, POTM_CONTEXTS as contextsData } from '@rms/widget-model';
 import RepeatableBlockActions from './RepeatableBlockActions';
 
 function PotmForm({ currentEmbed, formMode, onChange }) {

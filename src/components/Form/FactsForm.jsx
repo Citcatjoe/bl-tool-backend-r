@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import factsIcons from '../../data/factsIcons.json';
+import { FACTS_ICONS as factsIcons } from '@rms/widget-model';
 import ImageUploader from '../ImageUploader';
 import RepeatableBlockActions from './RepeatableBlockActions';
 import RichTextEditor from './RichTextEditor';
+
+/** Entités produites par l'échappement du texte simple, ramenées à leur caractère. */
+const BASIC_ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
 
 function FactsForm({ currentEmbed, formMode, onChange }) {
   const [rencontre, setRencontre] = useState('');
@@ -58,7 +61,13 @@ function FactsForm({ currentEmbed, formMode, onChange }) {
         }
         
         if (loadedItems.length > 0) {
-          setItems(loadedItems);
+          // Description d'un chiffre échappée à l'enregistrement (escapeHtmlText) : on rend au
+          // champ texte le texte tapé (`&amp;` → `&`), ré-échappé à la prochaine sauvegarde.
+          setItems(loadedItems.map((item) => (
+            item.type === 'number' && typeof item.text === 'string'
+              ? { ...item, text: item.text.replace(/&(?:amp|lt|gt|quot|#39);/g, (entity) => BASIC_ENTITIES[entity]) }
+              : item
+          )));
         }
       }
     }

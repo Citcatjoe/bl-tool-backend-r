@@ -89,6 +89,12 @@ Blick Tools Dashboard est une application web permettant de créer et gérer des
 - L'auteur original est préservé
 - La date de modification est mise à jour
 
+### Liens directs
+Le Hub Rédaction (et toute page) peut ouvrir le dashboard directement sur une action. Si vous n'êtes pas connecté, la connexion est demandée d'abord ; l'action s'exécute ensuite, puis le paramètre est retiré de l'adresse (un rechargement ne la répète pas).
+- **`?edit=<id>`** : ouvre le widget `<id>` en édition (« Widget introuvable. » s'il n'existe pas)
+- **`?teams`** : ouvre l'éditeur des effectifs (joueurs des NatiNotes) sur la première équipe
+- **`?teams=<teamId>`** : ouvre l'éditeur des effectifs sur l'équipe `<teamId>` (sur la première équipe si cet id n'existe pas)
+
 ## 🔍 Recherche et filtrage
 
 ### Barre de recherche

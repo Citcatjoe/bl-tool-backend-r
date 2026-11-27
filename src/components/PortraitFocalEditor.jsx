@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { normalizeFocal, focalStyle, DEFAULT_FOCAL } from '../data/portraitFocal';
+import { normalizeFocal, focalStyle, DEFAULT_FOCAL } from '@rms/widget-model';
 
 /**
  * Éditeur de cadrage d'un portrait — modale ouverte depuis `PortraitUploader`.

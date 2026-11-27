@@ -3,7 +3,7 @@ import { fetchAllTeams } from '@rms/services';
 import FieldHint from '../FieldHint';
 import defaultPortrait from '../../assets/img/default.jpg';
 import { byTeamOrder } from '../../data/teams';
-import { DEFAULT_FOCAL, focalStyle } from '../../data/portraitFocal';
+import { DEFAULT_FOCAL, focalStyle } from '@rms/widget-model';
 
 // Barème du lecteur — repris tel quel côté app cliente
 const RATINGS = [6, 5, 4, 3, 2, 1];
@@ -19,6 +19,10 @@ const emptyPlayer = () => ({
 });
 
 const byName = (a, b) => a.name.localeCompare(b.name);
+
+/** Entités produites par `sanitizeRichText` pour du texte simple, ramenées à leur caractère. */
+const BASIC_ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+const decodeBasicEntities = (text) => text.replace(/&(?:amp|lt|gt|quot|#39);/g, (entity) => BASIC_ENTITIES[entity]);
 
 function NatinotesForm({ currentEmbed, formMode, onChange }) {
   const [brand, setBrand] = useState('blick');
@@ -44,7 +48,13 @@ function NatinotesForm({ currentEmbed, formMode, onChange }) {
       setShowRecap(currentEmbed.showRecap !== false);
 
       if (Array.isArray(currentEmbed.players)) {
-        setPlayers(currentEmbed.players.map((p) => ({ ...emptyPlayer(), ...p })));
+        setPlayers(currentEmbed.players.map((p) => ({
+          ...emptyPlayer(),
+          ...p,
+          // Paragraphe nettoyé à l'enregistrement (sanitizeRichText) : on rend au textarea
+          // le texte tapé (`&amp;` → `&`), ré-échappé à la prochaine sauvegarde.
+          comment: decodeBasicEntities(p.comment || '')
+        })));
       }
     }
   }, [formMode, currentEmbed]);
@@ -107,10 +117,11 @@ function NatinotesForm({ currentEmbed, formMode, onChange }) {
     });
   }, [teams, formMode, currentEmbed]);
 
-  // Remontée au parent — le picker reste en dehors, il ne concerne que la saisie
+  // Remontée au parent — le picker reste en dehors, il ne concerne que la saisie.
+  // Les effectifs accompagnent la saisie : Form.jsx y recopie l'identité des joueurs.
   useEffect(() => {
-    onChange({ type: 'natinotes', brand, theme, title, players, showRecap });
-  }, [brand, theme, title, players, showRecap, onChange]);
+    onChange({ type: 'natinotes', brand, theme, title, players, showRecap, teams });
+  }, [brand, theme, title, players, showRecap, teams, onChange]);
 
   const takenIds = useMemo(() => new Set(players.map((p) => p.id)), [players]);
 

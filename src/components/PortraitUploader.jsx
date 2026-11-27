@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import imageCompression from 'browser-image-compression';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { slugify } from '../data/teams';
-import { DEFAULT_FOCAL, focalStyle } from '../data/portraitFocal';
+import { DEFAULT_FOCAL, focalStyle } from '@rms/widget-model';
 import PortraitFocalEditor from './PortraitFocalEditor';
 
 /**
