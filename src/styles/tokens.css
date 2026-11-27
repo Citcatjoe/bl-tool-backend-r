@@ -45,12 +45,12 @@
   --type-sondage-bg: #DCE8FF; --type-sondage-fg: #1740A8;  /* Sondage */
   --type-calendrier-bg: #D9F2E3; --type-calendrier-fg: #0F6B3C;  /* Calendrier */
   --type-teaser-bg: #FFF3B0; --type-teaser-fg: #6B5400;  /* Teaser */
-  --type-dossier-bg: #E3E0FF; --type-dossier-fg: #3F2FA8;  /* Dossier */
+  --type-dossier-bg: #D2EEFB; --type-dossier-fg: #075E8C;  /* Dossier (identité 2026-11-27 : trop proche de Sondage et Quiz) */
   --type-tinder-bg: #FFE0EC; --type-tinder-fg: #A31551;  /* Tinder */
   --type-quiz-bg: #F1DEFF; --type-quiz-fg: #6D21A8;  /* Quiz */
   --type-temoignage-bg: #D3F3F0; --type-temoignage-fg: #0B6660;  /* Témoignage */
   --type-potm-bg: #FFD9C7; --type-potm-fg: #9C3A0A;  /* Joueur du match */
-  --type-prono-bg: #FFDEDE; --type-prono-fg: #A31B1B;  /* Pronostic */
+  --type-prono-bg: #E8F3C8; --type-prono-fg: #4A5E00;  /* Pronostic (identité 2026-11-27 : trop proche de Tinder et Joueur du match) */
   --type-facts-bg: #E6E8F0; --type-facts-fg: #3A4060;  /* Faits marquants */
   --type-natinotes-bg: #FFE2B8; --type-natinotes-fg: #8A4B00;  /* NatiNotes */
 }
