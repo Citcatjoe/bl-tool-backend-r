@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import RepeatableBlockActions from './RepeatableBlockActions';
 
 // Champs "End", "Afficher les badges" et "Activer un lien live" masqués pour le moment (usage trop niche).
-// La logique reste en place : les valeurs existantes sont conservées à l'enregistrement et le widget les gère toujours.
-// Passer à `true` pour les réafficher (réactive aussi leur validation dans Form.jsx).
+// Les valeurs existantes sont conservées à l'enregistrement (packages/widget-model/calendar.js) et le
+// widget les gère toujours. Les réafficher exige d'abord d'ajouter leurs règles au modèle partagé.
 export const SHOW_ADVANCED_DATE_OPTIONS = false;
 
 function CalendarForm({ currentEmbed, formMode, onChange }) {
@@ -409,7 +409,7 @@ function CalendarForm({ currentEmbed, formMode, onChange }) {
                 type="url"
                 value={linkGlobalHref}
                 onChange={(e) => handleLinkGlobalHrefChange(e.target.value)}
-                placeholder="www.billeterie.com"
+                placeholder="https://www.billeterie.com"
                 className="field mb-0 w-full px-3 py-2 border border-line-strong rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>

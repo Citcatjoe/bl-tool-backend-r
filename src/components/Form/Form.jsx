@@ -249,14 +249,19 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
         
       } else if (formData.type === 'calendar') {
         // Validation et préparation partagées avec l'API (@rms/widget-model).
-        // Les options avancées des dates (SHOW_ADVANCED_DATE_OPTIONS) ne sont pas gérées : les réactiver exige de les ajouter à packages/widget-model/calendar.js.
+        // Options avancées des dates masquées (SHOW_ADVANCED_DATE_OPTIONS) : transmises pour
+        // conserver celles d'un calendrier existant, sans validation propre au formulaire.
         const calendarInput = {
           theme: formData.theme,
           title: formData.calName,
           dates: (formData.dates || []).map(d => ({
             text: d.text,
             complement: d.complement,
-            start: d.date ? new Date(d.date) : null
+            start: d.date ? new Date(d.date) : null,
+            end: d.endDate ? new Date(d.endDate) : null,
+            showBadge: d.showBadge === true,
+            liveLinkEnabled: d.liveLinkEnabled === true,
+            liveLinkUrl: d.liveLinkUrl || ''
           })),
           nbElemsToShow: (!formData.nbElements || formData.nbElements === 'tous') ? undefined : Number(formData.nbElements),
           linkGlobal: { text: formData.linkGlobalTxt, href: formData.linkGlobalHref, newTab: !!formData.linkGlobalNewTab },
@@ -426,8 +431,7 @@ function Form({ formVisible, formMode, formType, currentEmbed, onClose, onDataCh
           cards: Array.isArray(formData.tinderCards)
             ? formData.tinderCards.map(c => ({ id: c.id, label: c.tinderCardLabel, title: c.tinderCardTitle }))
             : formData.tinderCards,
-          // Légende affichée par défaut dans le formulaire
-          legend: formData.tinderLegend || { txt: '', display: true },
+          legend: formData.tinderLegend,
           tinderVotes: formData.tinderVotes,
           brand: formData.brand
         };
